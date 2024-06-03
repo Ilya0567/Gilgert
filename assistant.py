@@ -1,12 +1,13 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes
+from collections.abc import Mapping
 import datetime
 import json
 import os
 
 
 # Имя файла для хранения данных вопросов
-DATA_FILE = "questions.json"
+DATA_FILE = "data/questions.json"
 
 # Функция для загрузки данных из JSON-файла
 def load_data():
@@ -28,19 +29,17 @@ def save_data(new_data):
 
 
 # Функция, которая будет вызвана при команде /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def start(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [
         [InlineKeyboardButton("Расскажи о себе", callback_data='about')],
-        [InlineKeyboardButton("Задать вопрос", callback_data='ask_question')]
+        [InlineKeyboardButton("У меня вопрос", callback_data='ask_question')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text('Добро пожаловать! Выберите действие:', reply_markup=reply_markup)
-    
-    data = load_data()
-    await update.message.reply_text(f'Вопросы: \n {data}')
+
 
 # Функция для обработки нажатий на кнопки
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def button(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
 
@@ -56,7 +55,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data['awaiting_question'] = True
 
 # Функция для обработки текстовых сообщений
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.user_data.get('awaiting_question'):
          # Если ожидается вопрос от пользователя
         question = update.message.text
@@ -79,19 +78,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 def main():
     # Вставьте ваш API-токен здесь
     TOKEN = '7497408437:AAHcpnlNUDAu2CpW1khxf5keiBmxXRWCjAY'
-    
+
     # Создаем приложение
     application = ApplicationBuilder().token(TOKEN).build()
-    
+
     # Регистрируем обработчик для команды /start
     application.add_handler(CommandHandler("start", start))
-    
+
     # Регистрируем обработчик для нажатий на кнопки
     application.add_handler(CallbackQueryHandler(button))
-    
+
     # Регистрируем обработчик для текстовых сообщений
     application.add_handler(MessageHandler(None, handle_message))
-    
+
     # Запускаем бота
     application.run_polling()
 
