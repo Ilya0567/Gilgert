@@ -67,15 +67,15 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         # Сохранение данных с новым вопросом
         save_user_data(timestamp, user_id, question, None)
         df = pd.read_csv(DATA_FILE, index_col=False)
-        await update.message.reply_text("- - - - - - - - - - - - - - - - - - - - - - -  Ваш вопрос:  - - - - - - - - - - - - - - - - - - - - - - -\n"
-                                        "f{question}. \n"
+        await update.message.reply_text(f"- - - - - - - - - - - - - - - - - - - - - - -  Ваш вопрос:  - - - - - - - - - - - - - - - - - - - - - - -\n"
+                                        "{question}. \n"
                                         "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
                                         "Спасибо за обращение! Мы ответим вам в ближайшее время.")
     else:
         await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
         
     # отпрвляем уведомление
-    context.send_message(chat_id=CHAT_ID, text=f'New message from user {question}')
+    context.bot.send_message(chat_id=CHAT_ID, text=f'New message from user {question}')
     
 
 
