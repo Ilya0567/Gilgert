@@ -18,7 +18,7 @@ def send_notification(bot_token, chat_id, message):
     updater = Updater(token=bot_token)
     updater.bot.send_message(chat_id=chat_id, text=message)
     # Отправляем уведомление в собственный чат
-    send_notification(bot_token, chat_id, f'New message from user {message}')
+    # send_notification(bot_token, chat_id, f'New message from user {message}')
     
     
 
@@ -33,11 +33,13 @@ def save_user_data(timestamp, username, question, answer):
         "question": question,    
         "answer": answer
     }])
-    send_notification(TOKEN_BOT, CHAT_ID, new_entry)
+    
     # соединяем датасеты
     user_data = pd.concat([user_data, new_entry], ignore_index=True)
     # и сохраняем
     user_data.to_csv(DATA_FILE, index=False)
+    
+    send_notification(TOKEN_BOT, CHAT_ID, new_entry)
 
 
 
