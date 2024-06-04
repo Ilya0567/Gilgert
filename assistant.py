@@ -67,8 +67,7 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         # Сохранение данных с новым вопросом
         save_user_data(timestamp, user_id, question, None)
         df = pd.read_csv(DATA_FILE, index_col=False)
-        await update.message.reply_text(f"- - - - - - - - - - - - - - - - - - - - - - -  Ваш вопрос:  - - - - - - - - - - - - - - - - - - - - - - -\n"
-                                        "{question}. \n"
+        await update.message.reply_text(f"- - - - - - - - - - - - - - - - - - - - - - -  Ваш вопрос:  - - - - - - - - - - - - - - - - - - - - - - -\n{question}. \n"
                                         "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
                                         "Спасибо за обращение! Мы ответим вам в ближайшее время.")
         # отпрвляем уведомление
