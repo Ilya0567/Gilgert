@@ -10,15 +10,6 @@ TOKEN_BOT = "7497408437:AAHcpnlNUDAu2CpW1khxf5keiBmxXRWCjAY"
 CHAT_ID = "https://t.me/IlyaBetsukeli"
 
 
-# Функция для отправки уведомления в личный чат
-def send_notification(bot_token, chat_id, message):
-    updater = Updater(token=bot_token)
-    updater.bot.send_message(chat_id=chat_id, text=message)
-    # Отправляем уведомление в собственный чат
-    send_notification(bot_token, chat_id, f'New message from user {message}')
-    
-    
-
 # функция для сохранения вопросов от пользователей
 def save_user_data(timestamp, username, question, answer):
     # открываем файл с данными
@@ -35,8 +26,6 @@ def save_user_data(timestamp, username, question, answer):
     user_data = pd.concat([user_data, new_entry], ignore_index=True)
     # и сохраняем
     user_data.to_csv(DATA_FILE, index=False)
-    
-    # send_notification(TOKEN_BOT, CHAT_ID, new_entry)
 
 
 
@@ -80,10 +69,15 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         df = pd.read_csv(DATA_FILE, index_col=False)
         await update.message.reply_text(f"- - - - - - - - - - - - - - - - - - - - - - -  Ваш вопрос:  - - - - - - - - - - - - - - - - - - - - - - -\n"
                                         "{question}. \n"
-                                        "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
+                                        "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
                                         "Спасибо за обращение! Мы ответим вам в ближайшее время.")
     else:
         await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
+        
+    # отпрвляем уведомление
+    update.bot.send_message(chat_id=CHAT_ID, text=f'New message from user {question}')
+
+
 
 # Главная функция для запуска бота
 def main():
