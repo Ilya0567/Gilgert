@@ -75,7 +75,7 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
         
     # отпрвляем уведомление
-    context.bot.send_message(chat_id=CHAT_ID, text=f'New message from user {question}')
+    await context.bot.send_message(chat_id=CHAT_ID, text=f'New message from user {question}')
     
 
 
