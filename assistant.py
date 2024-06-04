@@ -46,7 +46,7 @@ def save_user_data(timestamp, username, question, answer):
 # Функция, которая будет вызвана при команде /start
 async def start(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [
-        [InlineKeyboardButton("О   нас", callback_data='about')],
+        [InlineKeyboardButton("О нас", callback_data='about')],
         [InlineKeyboardButton("У меня вопрос", callback_data='ask_question')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
