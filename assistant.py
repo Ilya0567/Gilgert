@@ -7,7 +7,7 @@ import pandas as pd
 # Имя файла для хранения данных вопросов
 DATA_FILE = "Data/questions.csv"
 TOKEN_BOT = "7497408437:AAHcpnlNUDAu2CpW1khxf5keiBmxXRWCjAY"
-CHAT_ID = "https://t.me/IlyaBetsukeli"
+CHAT_ID = "@ilyaBetsukeli"
 
 
 # функция для сохранения вопросов от пользователей
