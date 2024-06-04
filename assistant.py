@@ -9,7 +9,18 @@ import os
 
 # Имя файла для хранения данных вопросов
 DATA_FILE = "data/questions.csv"
+TOKEN_BOT = "7497408437:AAHcpnlNUDAu2CpW1khxf5keiBmxXRWCjAY"
+CHAT_ID = "https://t.me/IlyaBetsukeli"
 
+
+# Функция для отправки уведомления в личный чат
+def send_notification(bot_token, chat_id, message):
+    updater = Updater(token=bot_token)
+    updater.bot.send_message(chat_id=chat_id, text=message)
+    # Отправляем уведомление в личный чат
+    send_notification(bot_token, chat_id, f'New message from user {message}')
+
+# функция для сохранения вопросов от пользователей
 def save_user_data(timestamp, username, question, answer):
     # открываем файл с данными
     user_data = pd.read_csv(DATA_FILE, index_col=False)
@@ -20,10 +31,12 @@ def save_user_data(timestamp, username, question, answer):
         "question": question,    
         "answer": answer
     }])
+    send_notification(TOKEN_BOT, CHAT_ID, new_entry)
     # соединяем датасеты
     user_data = pd.concat([user_data, new_entry], ignore_index=True)
     # и сохраняем
     user_data.to_csv(DATA_FILE, index=False)
+
 
 
 # Функция, которая будет вызвана при команде /start
