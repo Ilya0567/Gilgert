@@ -73,8 +73,10 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
                                         "Спасибо за обращение! Мы ответим вам в ближайшее время.")
     else:
         await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
+        
     # отпрвляем уведомление
-    update.bot.send_message(chat_id=CHAT_ID, text=f'New message from user {question}')
+    update.send_message(chat_id=CHAT_ID, text=f'New message from user {question}')
+    
 
 
 
