@@ -80,7 +80,7 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         df = pd.read_csv(DATA_FILE, index_col=False)
         await update.message.reply_text(f"- - - - - - - - - - - - - - - - - - - - - - -  Ваш вопрос:  - - - - - - - - - - - - - - - - - - - - - - -\n"
                                         "{question}. \n"
-                                        "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  \n"
+                                        "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
                                         "Спасибо за обращение! Мы ответим вам в ближайшее время.")
     else:
         await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
