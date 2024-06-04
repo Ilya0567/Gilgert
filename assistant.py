@@ -17,8 +17,10 @@ CHAT_ID = "https://t.me/IlyaBetsukeli"
 def send_notification(bot_token, chat_id, message):
     updater = Updater(token=bot_token)
     updater.bot.send_message(chat_id=chat_id, text=message)
-    # Отправляем уведомление в личный чат
+    # Отправляем уведомление в собственный чат
     send_notification(bot_token, chat_id, f'New message from user {message}')
+    print(message)
+    
 
 # функция для сохранения вопросов от пользователей
 def save_user_data(timestamp, username, question, answer):
