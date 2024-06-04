@@ -1,31 +1,29 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes
 from collections.abc import Mapping
+import pandas as pd
 import datetime
 import json
 import os
 
 
 # Имя файла для хранения данных вопросов
-DATA_FILE = "data/questions.json"
+DATA_FILE = "data/questions.csv"
 
-# Функция для загрузки данных из JSON-файла
-def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as file:
-            return json.load(file)
-    return {}
-
-# Функция для сохранения данных в JSON-файл
-def save_data(new_data):
-    data = load_data()  # Загружаем существующие данные
-    for user_id, user_data in new_data.items():
-        if user_id in data:
-            data[user_id]["questions"].extend(user_data["questions"])
-        else:
-            data[user_id] = user_data
-    with open(DATA_FILE, "w") as file:
-        json.dump(data, file, indent=4)
+def save_user_data(timestamp, username, question, answer):
+    # открываем файл с данными
+    user_data = pd.read_csv(DATA_FILE, index_col=False)
+    # создаем новый датафрейм
+    new_entry = pd.DataFrame([{
+        "timestamp": timestamp, 
+        "username": username,
+        "question": question,    
+        "answer": answer
+    }])
+    # соединяем датасеты
+    user_data = pd.concat([user_data, new_entry], ignore_index=True)
+    # и сохраняем
+    user_data.to_csv(DATA_FILE, index=False)
 
 
 # Функция, которая будет вызвана при команде /start
@@ -58,18 +56,13 @@ async def button(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.user_data.get('awaiting_question'):
          # Если ожидается вопрос от пользователя
+        timestamp = update.message.date.timestamp()
         question = update.message.text
         user_id = update.message.from_user.id
         user_name = update.message.from_user.username or update.message.from_user.full_name
         context.user_data['awaiting_question'] = False
-
-        # Загрузка существующих данных
-        data = load_data()
-        if user_id not in data:
-            data[user_id] = {"user_name": user_name, "questions": []}
-        data[user_id]["questions"].append(question)
         # Сохранение данных с новым вопросом
-        save_data(data)
+        save_user_data(timestamp, user_id, question, None)
         await update.message.reply_text(f"Вы задали вопрос: \n {question}. \n\nСпасибо за обращение! Мы ответим вам в ближайшее время.")
     else:
         await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
