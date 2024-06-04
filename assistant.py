@@ -77,7 +77,10 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         context.user_data['awaiting_question'] = False
         # Сохранение данных с новым вопросом
         save_user_data(timestamp, user_id, question, None)
-        await update.message.reply_text(f"Вы задали вопрос: \n {question}. \n\nСпасибо за обращение! Мы ответим вам в ближайшее время.")
+        df = pd.read_csv(DATA_FILE, index_col=False)
+        await update.message.reply_text(f"Вы задали вопрос: \n {question}. \n\n"
+                                        "Спасибо за обращение! Мы ответим вам в ближайшее время."
+                                        f"{df.loc[1]}")
     else:
         await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
 
