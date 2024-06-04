@@ -76,7 +76,7 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         user_name = update.message.from_user.username or update.message.from_user.full_name
         context.user_data['awaiting_question'] = False
         # Сохранение данных с новым вопросом
-        save_user_data(timestamp, user_id, question, None)
+        # save_user_data(timestamp, user_id, question, None)
         await update.message.reply_text(f"Вы задали вопрос: \n {question}. \n\nСпасибо за обращение! Мы ответим вам в ближайшее время.")
     else:
         await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
