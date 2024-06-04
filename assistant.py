@@ -2,9 +2,6 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes
 from collections.abc import Mapping
 import pandas as pd
-import datetime
-import json
-import os
 
 
 # Имя файла для хранения данных вопросов
@@ -50,7 +47,7 @@ async def start(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
         [InlineKeyboardButton("У меня вопрос", callback_data='ask_question')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text('Добро пожаловать! Выберите действие:', reply_markup=reply_markup)
+    await update.message.reply_text('Добро пожаловать, дорогие пользователи! Выберите действие:', reply_markup=reply_markup)
 
 
 # Функция для обработки нажатий на кнопки
