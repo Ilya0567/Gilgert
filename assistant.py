@@ -36,7 +36,7 @@ def save_user_data(timestamp, username, question, answer):
     # и сохраняем
     user_data.to_csv(DATA_FILE, index=False)
     
-    send_notification(TOKEN_BOT, CHAT_ID, new_entry)
+    # send_notification(TOKEN_BOT, CHAT_ID, new_entry)
 
 
 
