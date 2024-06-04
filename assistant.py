@@ -47,7 +47,7 @@ async def start(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
         [InlineKeyboardButton("У меня вопрос", callback_data='ask_question')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text('Добро пожаловать! Выберите действие:', reply_markup=reply_markup)
+    await update.message.reply_text('Добро пожаловать!', reply_markup=reply_markup)
 
 
 # Функция для обработки нажатий на кнопки
