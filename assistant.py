@@ -2,31 +2,13 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes
 from collections.abc import Mapping
 import pandas as pd
+from data_operation import save_user_data
 
 
 # Имя файла для хранения данных вопросов
 DATA_FILE = "Data/questions.csv"
 TOKEN_BOT = "7497408437:AAHcpnlNUDAu2CpW1khxf5keiBmxXRWCjAY"
-CHAT_ID = "953641897"
-
-
-# функция для сохранения вопросов от пользователей
-def save_user_data(timestamp, username, question, answer):
-    # открываем файл с данными
-    user_data = pd.read_csv(DATA_FILE, index_col=False)
-    # создаем новый датафрейм
-    new_entry = pd.DataFrame([{
-        "timestamp": timestamp, 
-        "username": username,
-        "question": question,    
-        "answer": answer
-    }])
-    
-    # соединяем датасеты
-    user_data = pd.concat([user_data, new_entry], ignore_index=True)
-    # и сохраняем
-    user_data.to_csv(DATA_FILE, index=False)
-
+CHAT_ID = "1002051079352"
 
 
 # Функция, которая будет вызвана при команде /start
@@ -94,9 +76,6 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
 
 # Главная функция для запуска бота
 def main():
-    # Вставьте ваш API-токен здесь
-    TOKEN = '7497408437:AAHcpnlNUDAu2CpW1khxf5keiBmxXRWCjAY'
-
     # Создаем приложение
     application = ApplicationBuilder().token(TOKEN).build()
 
