@@ -65,8 +65,9 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         # перенаправление вопроса экспертам
         await context.bot.send_message(chat_id=CHAT_ID, 
                                        text=f'Сообщение от пользователя {user_name}:\n{question}')
-    elif update.message.from_user.id == CHAT_ID:
-        await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
+    else:
+        if update.message.from_user.id != CHAT_ID:
+            await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
 
     
 
