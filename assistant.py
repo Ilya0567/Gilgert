@@ -50,6 +50,7 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         user_id = update.message.from_user.id
         user_name = update.message.from_user.username or update.message.from_user.full_name
         context.user_data['awaiting_question'] = False
+        
         # Сохранение данных с новым вопросом
         save_user_data(timestamp, user_id, question, None)
         df = pd.read_csv(DATA_FILE, index_col=False)

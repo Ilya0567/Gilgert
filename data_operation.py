@@ -1,5 +1,6 @@
 import pandas as pd
 from config import DATA_FILE
+from random import randint
 
 def save_user_data(timestamp, username, question, answer):
     """
@@ -11,10 +12,15 @@ def save_user_data(timestamp, username, question, answer):
         question (_type_): вопрос от пользователя
         answer (_type_): ответ на вопрос
     """
+    # генерируем уникальный номер сообщения
+    id = "".join([str(randint(0, 9)) for i in range(7)])
+    
     # открываем файл с данными
     user_data = pd.read_csv(DATA_FILE, index_col=False)
+    user_data["id"] = ""
     # создаем новый датафрейм
     new_entry = pd.DataFrame([{
+        "id": id,
         "timestamp": timestamp, 
         "username": username,
         "question": question,    
