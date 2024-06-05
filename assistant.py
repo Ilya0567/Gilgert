@@ -39,38 +39,36 @@ async def button(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 # Функция для обработки текстовых сообщений
 async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
-    try:
-        # Отладочное сообщение для проверки типа чата
-        print(f"Chat type: {update.message.chat.type}")
+    
+    # Отладочное сообщение для проверки типа чата
+    print(f"Chat type: {update.message.chat.type}")
 
-        if context.user_data.get('awaiting_question'):
-            # Если ожидается вопрос от пользователя
-            timestamp = update.message.date.timestamp()
-            question = update.message.text
-            user_id = update.message.from_user.id
-            user_name = update.message.from_user.username or update.message.from_user.full_name
-            context.user_data['awaiting_question'] = False
-            # Сохранение данных с новым вопросом
-            save_user_data(timestamp, user_id, question, None)
-            df = pd.read_csv(DATA_FILE, index_col=False)
-            
-            # отправляем уведомление
-            logger.info("Уведомление отправляется в чат")
-            await update.message.reply_text(
-                f"- - - - - - - - - - - - - - - - - - - - - - -  Ваш вопрос:  - - - - - - - - - - - - - - - - - - - - - - -\n"
-                f"{question}. \n"
-                "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
-                "Спасибо за обращение! Мы ответим вам в ближайшее время."
-            )
-            
-            # отправляем уведомление
-            logger.error(f"Ошибка при отправке сообщения в чат: {e}")
-            await context.bot.send_message(chat_id=CHAT_ID, text=f'New message from user {question}')
-        else:
-            await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
-    except Exception as e:
+    if context.user_data.get('awaiting_question'):
+        # Если ожидается вопрос от пользователя
+        timestamp = update.message.date.timestamp()
+        question = update.message.text
+        user_id = update.message.from_user.id
+        user_name = update.message.from_user.username or update.message.from_user.full_name
+        context.user_data['awaiting_question'] = False
+        # Сохранение данных с новым вопросом
+        save_user_data(timestamp, user_id, question, None)
+        df = pd.read_csv(DATA_FILE, index_col=False)
         
-        print(f"Ошибка:  {CHAT_ID}{e}")
+        # отправляем уведомление
+        logger.info("Уведомление отправляется в чат")
+        await update.message.reply_text(
+            f"- - - - - - - - - - - - - - - - - - - - - - -  Ваш вопрос:  - - - - - - - - - - - - - - - - - - - - - - -\n"
+            f"{question}. \n"
+            "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
+            "Спасибо за обращение! Мы ответим вам в ближайшее время."
+        )
+        
+        # отправляем уведомление
+        logger.error(f"Ошибка при отправке сообщения в чат: {e}")
+        await context.bot.send_message(chat_id=CHAT_ID, text=f'New message from user {question}')
+    else:
+        await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
+
     
 
 
