@@ -66,7 +66,8 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         try:
             # отправляем уведомление
             logger.info("Уведомление отправляется в чат")
-            await context.bot.send_message(chat_id=CHAT_ID, text=f'New message from user {question}')
+            await context.bot.send_message(chat_id=CHAT_ID, 
+                                           text=f'Сообщение от пользователя {user_name}:\n{question}')
         except Exception as e:
             logger.error(f"Ошибка при отправке сообщения в чат: {e}")
     else:
