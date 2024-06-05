@@ -2,9 +2,14 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes
 from collections.abc import Mapping
 import pandas as pd
+import logging
+
 from data_operation import save_user_data
 from config import DATA_FILE, TOKEN_BOT, CHAT_ID
 
+# Настройка логирования
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Функция, которая будет вызвана при команде /start
 async def start(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -49,7 +54,8 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
             save_user_data(timestamp, user_id, question, None)
             df = pd.read_csv(DATA_FILE, index_col=False)
             
-            print("Ответ на вопрос отправляется пользователю")
+            # отправляем уведомление
+            logger.info("Уведомление отправляется в чат")
             await update.message.reply_text(
                 f"- - - - - - - - - - - - - - - - - - - - - - -  Ваш вопрос:  - - - - - - - - - - - - - - - - - - - - - - -\n"
                 f"{question}. \n"
@@ -58,7 +64,7 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
             )
             
             # отправляем уведомление
-            print("Уведомление отправляется  в чат")
+            logger.error(f"Ошибка при отправке сообщения в чат: {e}")
             await context.bot.send_message(chat_id=CHAT_ID, text=f'New message from user {question}')
         else:
             await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
