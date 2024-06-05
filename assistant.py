@@ -52,7 +52,7 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         context.user_data['awaiting_question'] = False
         
         # Сохранение данных с новым вопросом
-        save_user_data(timestamp, user_id, question, None)
+        question_id = save_user_data(timestamp, user_id, question, None)
         df = pd.read_csv(DATA_FILE, index_col=False)
         
         # отправляем уведомление
@@ -65,7 +65,7 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         
         # перенаправление вопроса экспертам
         await context.bot.send_message(chat_id=CHAT_ID, 
-                                       text=f'Сообщение от пользователя {user_name}:\n{question}')
+                                       text=f'Сообщение №{question_id} от пользователя {user_name}:\n{question}')
     else:
         # Проверка типа чата, что бот отвечал только в личных сообщениях
         if update.message.chat.type == 'private':

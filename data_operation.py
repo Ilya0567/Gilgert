@@ -2,7 +2,7 @@ import pandas as pd
 from config import DATA_FILE
 from random import randint
 
-def save_user_data(timestamp, username, question, answer):
+def save_user_data(timestamp, username, question, answer) -> str:
     """
     функция для сохранения вопросов от пользователей
 
@@ -17,7 +17,7 @@ def save_user_data(timestamp, username, question, answer):
     
     # открываем файл с данными
     user_data = pd.read_csv(DATA_FILE, index_col=False)
-    user_data["id"] = ""
+    
     # создаем новый датафрейм
     new_entry = pd.DataFrame([{
         "id": id,
@@ -31,3 +31,5 @@ def save_user_data(timestamp, username, question, answer):
     user_data = pd.concat([user_data, new_entry], ignore_index=True)
     # и сохраняем
     user_data.to_csv(DATA_FILE, index=False)
+    
+    return id
