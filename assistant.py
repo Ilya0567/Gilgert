@@ -66,7 +66,8 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         await context.bot.send_message(chat_id=CHAT_ID, 
                                        text=f'Сообщение от пользователя {user_name}:\n{question}')
     else:
-        if update.message.from_user.id != CHAT_ID:
+        # Проверка типа чата, что бот отвечал только в личных сообщениях
+        if update.message.chat.type == 'private':
             await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
 
     
