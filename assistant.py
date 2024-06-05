@@ -64,7 +64,7 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
             await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
     except Exception as e:
         
-        print(f"Ошибка: {e}")
+        print(f"Ошибка: {CHAT_ID}{e}")
     
 
 
