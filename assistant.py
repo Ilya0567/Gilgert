@@ -60,17 +60,12 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
             f"- - - - - - - - - - - - - - - - - - - - - - -  Ваш вопрос:  - - - - - - - - - - - - - - - - - - - - - - -\n"
             f"{question}. \n"
             "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
-            "Спасибо за обращение! Мы ответим вам в ближайшее время."
-        )
+            "Спасибо за обращение! Мы ответим вам в ближайшее время.")
         
-        try:
-            # отправляем уведомление
-            logger.info("Уведомление отправляется в чат")
-            await context.bot.send_message(chat_id=CHAT_ID, 
-                                           text=f'Сообщение от пользователя {user_name}:\n{question}')
-        except Exception as e:
-            logger.error(f"Ошибка при отправке сообщения в чат: {e}")
-    else:
+        # перенаправление вопроса экспертам
+        await context.bot.send_message(chat_id=CHAT_ID, 
+                                       text=f'Сообщение от пользователя {user_name}:\n{question}')
+    elif update.message.from_user.id != CHAT_ID:
         await update.message.reply_text("Пожалуйста, используйте кнопки для взаимодействия со мной.")
 
     
