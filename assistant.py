@@ -3,12 +3,7 @@ from telegram.ext import Updater, ApplicationBuilder, CommandHandler, MessageHan
 from collections.abc import Mapping
 import pandas as pd
 from data_operation import save_user_data
-
-
-# Имя файла для хранения данных вопросов
-DATA_FILE = "Data/questions.csv"
-TOKEN_BOT = "7497408437:AAHcpnlNUDAu2CpW1khxf5keiBmxXRWCjAY"
-CHAT_ID = "1002051079352"
+from config import DATA_FILE, TOKEN_BOT, CHAT_ID
 
 
 # Функция, которая будет вызвана при команде /start
@@ -77,7 +72,7 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
 # Главная функция для запуска бота
 def main():
     # Создаем приложение
-    application = ApplicationBuilder().token(TOKEN).build()
+    application = ApplicationBuilder().token(TOKEN_BOT).build()
 
     # Регистрируем обработчик для команды /start
     application.add_handler(CommandHandler("start", start))
