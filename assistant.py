@@ -39,6 +39,7 @@ async def button(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data['awaiting_question'] = True
     elif query.data == 'check_product':
         await query.edit_message_text(text="Пожалуйста, введите название продукта, который Вас интересует.")
+        
         context.user_data['check_product'] = True
 
 # Функция для обработки текстовых сообщений
