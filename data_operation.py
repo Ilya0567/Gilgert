@@ -4,6 +4,15 @@ from random import randint
 
 from natasha import MorphVocab, NewsEmbedding, NewsMorphTagger, Doc, Segmenter
 
+def id_request():
+    """
+    функция для генерации уникального id
+
+    Returns:
+        str: Сгенерированный уникальный номер сообщения.
+    """
+    return "".join([str(randint(0, 10)) for i in range(7)])
+
 
 def save_user_data(timestamp, username, question, answer) -> str:
     """
@@ -15,10 +24,10 @@ def save_user_data(timestamp, username, question, answer) -> str:
         question (str): вопрос от пользователя
         answer (str): ответ на вопрос
     Returns:
-        str: Сгенерированный уникальный номер сообщения.
+        str: Уникальный номер сообщения.
     """
     # генерируем уникальный номер сообщения
-    id = "".join([str(randint(0, 9)) for i in range(7)])
+    id = id_request()
     
     # открываем файл с данными
     user_data = pd.read_csv(DATA_FILE, index_col=False)
@@ -103,11 +112,12 @@ def check_product(product: str) -> str:
     in_recommended = any(product in item for item in recommended)
     in_avoid = any(product in item for item in avoid)
     
+
     if in_recommended and not in_avoid:
         return "Этот продукт можно есть."
     elif in_avoid and not in_recommended:
         return "Этот продукт нельзя есть."
     elif in_recommended and in_avoid:
-        return "Этот продукт есть как в списке рекомендованных, так и в списке запрещённых. Пожалуйста, уточните, в каком виде данный продукт?"
+        return "Этот продукт есть как в списке рекомендованных, так и в списке запрещённых. Вопрос передан нашим специалистам, от которых я скоро принесу Вам ответ."
     else:
-        return "Этот продукт не найден в списках."
+        return "Этот продукт не найден в списках. Вопрос передан нашим специалистам, от которых я скоро принесу Вам ответ."
