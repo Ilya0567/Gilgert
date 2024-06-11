@@ -24,6 +24,7 @@ async def start(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
     "✨ Нажмите на кнопку 'Проверить продукт', чтобы начать.", reply_markup=reply_markup)
 
 
+
 # Функция для обработки нажатий на кнопки
 async def button(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
