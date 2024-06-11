@@ -88,7 +88,7 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         # отвечаем пользователю
         await update.message.reply_text(answer)
         # если требуется, перенаправляем вопрос специалистам
-        if len(answer.split(".")) > 2: # так как в ответе, где требуется помощь специалиста 2 предложения
+        if "ответ" in answer: 
             id_product_question = id_request()
             await context.bot.send_message(chat_id=CHAT_ID, 
                                        text=f'Вопрос по продукту №{id_product_question} от пользователя {user_name}:\n{product}')
