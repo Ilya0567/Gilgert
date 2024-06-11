@@ -19,7 +19,9 @@ async def start(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
         [InlineKeyboardButton("Проверить продукт", callback_data="check_product")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text('Добро пожаловать!', reply_markup=reply_markup)
+    await update.message.reply_text("👋 Привет! Я ваш помощник, созданный специально для помощи людям с синдромом Жильбера.\n\n"
+    "Я могу помочь вам с рекомендациями по продуктам питания. Пожалуйста, используйте кнопку ниже, чтобы узнать, можно ли есть определенный продукт.\n\n"
+    "✨ Нажмите на кнопку 'Проверить продукт', чтобы начать.", reply_markup=reply_markup)
 
 
 # Функция для обработки нажатий на кнопки
@@ -60,10 +62,15 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         # отправляем уведомление
         logger.info("Уведомление отправляется в чат")
         await update.message.reply_text(
-            f"- - - - - - - - - - - - - - - - - - - - - - -  Ваш вопрос:  - - - - - - - - - - - - - - - - - - - - - - -\n"
-            f"{ question}. \n"
-            "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
-            "Спасибо за обращение! Мы ответим вам в ближайшее время.")
+        "✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨\n"
+        "📩 *Ваш вопрос* 📩\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"❓ {question} ❓\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "🙏 Спасибо за обращение! Мы ответим вам в ближайшее время.\n"
+        "✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨",
+        parse_mode='Markdown'
+    )
         
         # перенаправление вопроса экспертам
         await context.bot.send_message(chat_id=CHAT_ID, 
