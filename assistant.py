@@ -34,7 +34,7 @@ async def button(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
             "На данном этапе мы внедряем первые функции, и в скором времени планируем добавить ИИ для улучшения возможностей бота. "
         )
         await query.edit_message_text(text= about_text)
-    elif query.data == 'check_product':
+    elif query.data == 'ask_question':
         await query.edit_message_text(text="Пожалуйста, задайте свой вопрос.")
         context.user_data['awaiting_question'] = True
     elif query.data == 'check_product':
