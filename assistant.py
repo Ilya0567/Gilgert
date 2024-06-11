@@ -81,8 +81,9 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text(answer)
         # если требуется, перенаправляем вопрос специалистам
         if len(answer.split(".")) > 1:
+            id_product_question = id_request()
             await context.bot.send_message(chat_id=CHAT_ID, 
-                                       text=f'Вопрос по продукту №{id_request} от пользователя {user_name}:\n{product}')
+                                       text=f'Вопрос по продукту №{id_product_question} от пользователя {user_name}:\n{product}')
     else:
         # Проверка типа чата, чтобы бот отвечал только в личных сообщениях
         if update.message.chat.type == 'private':
