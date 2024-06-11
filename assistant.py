@@ -61,7 +61,7 @@ async def handle_message(update: Updater, context: ContextTypes.DEFAULT_TYPE) ->
         logger.info("Уведомление отправляется в чат")
         await update.message.reply_text(
             f"- - - - - - - - - - - - - - - - - - - - - - -  Ваш вопрос:  - - - - - - - - - - - - - - - - - - - - - - -\n"
-            f"{question}. \n"
+            f"{ question}. \n"
             "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
             "Спасибо за обращение! Мы ответим вам в ближайшее время.")
         
