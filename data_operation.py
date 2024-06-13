@@ -121,7 +121,7 @@ def check_product(product: str) -> str:
     elif in_avoid and not in_recommended:
         return (
             "❌ *Этот продукт нельзя есть.*\n"
-            "К сожалению, этот продукт находится в списке запрещённых."
+            "К сожалению, этот продукт находится в списке нерекоммендуемых."
         )
     elif in_recommended and in_avoid:
         return (
