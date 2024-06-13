@@ -1,4 +1,4 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import Updater, ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes
 from collections.abc import Mapping
 import pandas as pd
@@ -32,17 +32,16 @@ async def button(update: Updater, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     if query.data == 'about':
         about_text = (
-            "Мы молодая команда студентов из МФТИ, создающая ИИ-ассистента для людей с синдромом Жильбера. "
-            "Наш бот предназначен для помощи и поддержки людей с этим заболеванием. "
-            "На данном этапе мы внедряем первые функции, и в скором времени планируем добавить ИИ для улучшения возможностей бота. "
+            "*Мы молодая команда студентов из МФТИ, создающая ИИ-ассистента для людей с синдромом Жильбера.*\n\n"
+            "Наш бот предназначен для помощи и поддержки людей с этим заболеванием.\n\n"
+            "На данном этапе мы внедряем первые функции, и в скором времени планируем добавить ИИ для улучшения возможностей бота."
         )
-        await query.edit_message_text(text= about_text)
+        await query.edit_message_text(text=about_text, parse_mode=ParseMode.MARKDOWN)
     elif query.data == 'ask_question':
-        await query.edit_message_text(text="Пожалуйста, задайте свой вопрос.")
+        await query.edit_message_text(text="*Пожалуйста, задайте свой вопрос.*", parse_mode=ParseMode.MARKDOWN)
         context.user_data['awaiting_question'] = True
     elif query.data == 'check_product':
-        await query.edit_message_text(text="Пожалуйста, введите название продукта, который Вас интересует.")
-        
+        await query.edit_message_text(text="*Пожалуйста, введите название продукта, который Вас интересует.*", parse_mode=ParseMode.MARKDOWN)
         context.user_data['check_product'] = True
 
 # Функция для обработки текстовых сообщений
