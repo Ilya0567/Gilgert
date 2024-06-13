@@ -100,7 +100,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         product = update.message.text
         user_id = update.message.from_user.id
         user_name = update.message.from_user.username or update.message.from_user.full_name
-        context.user_data['check_product'] = False
+        context.user_data['check_product'] = True
         # ищем ответ 
         answer = check_product(product)
         # отвечаем пользователю
