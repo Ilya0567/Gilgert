@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Перейти в директорию вашего проекта
+cd /root/project/Assistant
+
+# Пуллить последние изменения из репозитория
+git pull
+
+# Перезапустить службу бота
+sudo systemctl restart bot_service
+
