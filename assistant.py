@@ -53,7 +53,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await query.edit_message_text(text=about_text, reply_markup=main_menu_keyboard)
     elif query.data == 'ask_question':
         await query.edit_message_text(text="❓ Пожалуйста, задайте свой вопрос.", reply_markup=main_menu_keyboard)
-        context.user_data['awaiting_question'] = True
+        # context.user_data['awaiting_question'] = True
     elif query.data == 'check_product':
         await query.edit_message_text(text="🔍 Пожалуйста, введите название продукта, который Вас интересует.", reply_markup=main_menu_keyboard)
         context.user_data['check_product'] = True
