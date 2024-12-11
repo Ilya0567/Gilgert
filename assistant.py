@@ -71,6 +71,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text("Выберите категорию здоровых рецептов:", reply_markup=reply_markup)
+        
+    if query.data == "back_to_main":
+        await query.edit_message_text(reply_markup=main_menu_keyboard)
+
+
 
 # Функция для обработки текстовых сообщений
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
