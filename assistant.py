@@ -16,7 +16,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [
         [InlineKeyboardButton("О нас", callback_data='about')],
         [InlineKeyboardButton("У меня вопрос", callback_data='ask_question')],
-        [InlineKeyboardButton("Проверить продукт", callback_data="check_product")]
+        [InlineKeyboardButton("Проверить продукт", callback_data="check_product")],
+        [InlineKeyboardButton("Здоровые рецепты", callback_data="healthy_recipes")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     if update.message:
@@ -58,6 +59,18 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data['check_product'] = True
     elif query.data == 'start':
         await start(update, context)
+    
+    if query.data == "healthy_recipes":
+        # Если нажали на кнопку "Здоровые рецепты", показываем дополнительные опции
+        keyboard = [
+            [InlineKeyboardButton("Завтраки", callback_data="breakfast")],
+            [InlineKeyboardButton("Обеды", callback_data="lunch")],
+            [InlineKeyboardButton("Ужины", callback_data="dinner")],
+            [InlineKeyboardButton("Напитки", callback_data="drinks")],
+            [InlineKeyboardButton("Назад", callback_data="back_to_main")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text("Выберите категорию здоровых рецептов:", reply_markup=reply_markup)
 
 # Функция для обработки текстовых сообщений
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
