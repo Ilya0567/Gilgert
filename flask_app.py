@@ -5,7 +5,14 @@ import logging
 app = Flask(__name__)
 
 # Настройка логирования
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(message)s')
+logging.basicConfig(
+    level=logging.DEBUG, 
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler('root/project/Assistant/flask_app.log'),  # Логи в файл
+        logging.StreamHandler()  # Логи в консоль (по желанию)
+    ]
+)
 
 @app.route('/post-receive', methods=['POST'])
 def post_receive():
