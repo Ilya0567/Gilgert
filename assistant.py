@@ -41,7 +41,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await query.answer()
 
     main_menu_keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔙 Главное меню")]
+        [InlineKeyboardButton("🔙 Главное меню", callback_data='start')]
     ])
 
     if query.data == 'about':
