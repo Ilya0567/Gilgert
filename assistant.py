@@ -5,7 +5,8 @@ import pandas as pd
 import logging
 
 from data_operation import save_user_data, check_product, id_request
-from config import DATA_FILE, TOKEN_BOT, CHAT_ID
+import lunch
+from config import DATA_FILE, TOKEN_BOT, CHAT_ID, DISHES
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -59,19 +60,86 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data['check_product'] = True
     elif query.data == 'start':
         await start(update, context)
-    
-    
-    if query.data == "healthy_recipes":
-        # Если нажали на кнопку "Здоровые рецепты", показываем дополнительные опции
-        keyboard = [
+
+    # кнопки с категориями рецептов
+    keyboard_recipes = [
             [InlineKeyboardButton("Завтраки", callback_data="breakfast")],
             [InlineKeyboardButton("Обеды", callback_data="lunch")],
             [InlineKeyboardButton("Ужины", callback_data="dinner")],
             [InlineKeyboardButton("Напитки", callback_data="drinks")],
             [InlineKeyboardButton("Назад", callback_data="start")]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if query.data == "healthy_recipes":
+        # Если нажали на кнопку "Здоровые рецепты", показываем дополнительные опции
+        reply_markup = InlineKeyboardMarkup(keyboard_recipes)
         await query.edit_message_text("Выберите категорию здоровых рецептов:", reply_markup=reply_markup)
+
+
+
+    # Обработчик нажатия кнопки "Обед"
+    if query.data == "lunch":
+        try:
+            # Создаем объект LunchGenerator
+            lunch_ = lunch.LunchGenerator(data_source=DISHES)
+            dishes = lunch_.get_lunch_names()
+            dishes_text = "\n".join([f"- {dish}" for dish in dishes])
+            keyboard_dish_options = [
+                [InlineKeyboardButton("Ингредиенты", callback_data="ingredients_lunch")],
+                [InlineKeyboardButton("Изменить", callback_data="change_lunch")],
+                [InlineKeyboardButton("Назад", callback_data="healthy_recipes")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard_dish_options)
+            await query.edit_message_text(
+                text=f"Вот список блюд на обед:\n\n{dishes_text}",
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            await query.edit_message_text(f"Произошла ошибка при загрузке обеда: {str(e)}")
+
+    # # Обработчик кнопки "Ингредиенты"
+    # if query.data == "ingredients_breakfast":
+    #     dish = "Овсянка с фруктами"  # Здесь можно предусмотреть выбор конкретного блюда пользователем
+    #     ingredients = recipe_manager.get_ingredients(dish)
+    #     keyboard_ingredients_options = [
+    #         [InlineKeyboardButton("Способ приготовления", callback_data="recipe_method")],
+    #         [InlineKeyboardButton("Назад", callback_data="breakfast")],
+    #         [InlineKeyboardButton("Главное меню", callback_data="start")]
+    #     ]
+    #     reply_markup = InlineKeyboardMarkup(keyboard_ingredients_options)
+    #     await query.edit_message_text(
+    #         text=f"Ингредиенты для блюда '{dish}':\n\n{ingredients}",
+    #         reply_markup=reply_markup
+    #     )
+
+    # # Обработчик кнопки "Изменить"
+    # if query.data == "change_breakfast":
+    #     # Повторный вызов скрипта для выбора новых блюд (эмулируется повторным получением списка блюд)
+    #     dishes = recipe_manager.get_dishes("breakfast")
+    #     dishes_text = "\n".join([f"- {dish}" for dish in dishes])
+    #     keyboard_dish_options = [
+    #         [InlineKeyboardButton("Ингредиенты", callback_data="ingredients_breakfast")],
+    #         [InlineKeyboardButton("Изменить", callback_data="change_breakfast")],
+    #         [InlineKeyboardButton("Назад", callback_data="healthy_recipes")]
+    #     ]
+    #     reply_markup = InlineKeyboardMarkup(keyboard_dish_options)
+    #     await query.edit_message_text(
+    #         text=f"Обновленный список блюд на завтрак:\n\n{dishes_text}",
+    #         reply_markup=reply_markup
+    #     )
+
+    # # Обработчик кнопки "Способ приготовления"
+    # if query.data == "recipe_method":
+    #     method = "1. Залейте овсянку горячей водой.\n2. Добавьте нарезанные фрукты и мед.\n3. Хорошо перемешайте."
+    #     keyboard_method_options = [
+    #         [InlineKeyboardButton("Назад", callback_data="ingredients_breakfast")],
+    #         [InlineKeyboardButton("Главное меню", callback_data="start")]
+    #     ]
+    #     reply_markup = InlineKeyboardMarkup(keyboard_method_options)
+    #     await query.edit_message_text(
+    #         text=f"Способ приготовления:\n\n{method}",
+    #         reply_markup=reply_markup
+    #     )
         
     if query.data == "start":
         await update.callback_query.edit_message_text(
@@ -79,6 +147,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             "Я могу помочь Вам с рекомендациями по продуктам питания. Пожалуйста, используйте кнопку ниже, чтобы узнать, можно ли есть определенный продукт. Также Вы можете посмотреть собранные мной вкусные здоровые рецепты.\n\n"
             "✨ Нажмите на кнопку 'Проверить продукт', чтобы начать.", 
             reply_markup=reply_markup)
+    
+
+    
       
 
 
