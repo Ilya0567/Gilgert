@@ -83,7 +83,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             # Создаем объект LunchGenerator
             lunch_ = lunch.LunchGenerator(data_source=DISHES)
             dishes = lunch_.get_lunch_names()
-            dishes_text = "\n".join([f"- {dish}" for dish in dishes])
+            dishes_text = ([f"- {dish}" for dish in dishes])
             keyboard_dish_options = [
                 [InlineKeyboardButton("Ингредиенты", callback_data="ingredients_lunch")],
                 [InlineKeyboardButton("Изменить", callback_data="change_lunch")],
