@@ -92,3 +92,11 @@ class LunchGenerator:
             f"Ингредиенты:\n{ingredients}\n\n"
             f"Приготовление:\n{preparation}"
         )
+
+    def get_dishes_by_category(self, category):
+        """
+        Возвращает список блюд для указанной категории.
+        """
+        if category not in self.df["Тип блюда"].unique():
+            return []
+        return self.df[self.df["Тип блюда"] == category]["Название завтрака:"].tolist()

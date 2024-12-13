@@ -79,40 +79,70 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # Обработчик нажатия кнопки "Обед"
     if query.data == "lunch":
-        if "lunch_generator" not in context.user_data:
-            try:
-                lunch_ = lunch.LunchGenerator(data_source=DISHES)
-                context.user_data["lunch_generator"] = lunch_
-                context.user_data["lunch_dishes"] = lunch_.lunch  # Сохраняем текущий обед
-            except Exception as e:
-                await query.edit_message_text(f"Произошла ошибка при загрузке обеда: {str(e)}")
-                return
-
-        dishes = context.user_data["lunch_dishes"]
-        keyboard_dishes = [
-            [InlineKeyboardButton(f"{dish}", callback_data=f"dish_{category}")] for category, dish in dishes.items() if dish
+        # Показываем категории обедов
+        keyboard_categories = [
+            [InlineKeyboardButton("Первые", callback_data="category_Первое блюдо")],
+            [InlineKeyboardButton("Основные", callback_data="category_второе блюдо")],
+            [InlineKeyboardButton("Гарниры", callback_data="category_гарниры")],
+            [InlineKeyboardButton("Салаты", callback_data="category_салат")],
+            [InlineKeyboardButton("Назад", callback_data="healthy_recipes")]
         ]
-        keyboard_dishes.append([InlineKeyboardButton("Назад", callback_data="healthy_recipes")])
-        reply_markup = InlineKeyboardMarkup(keyboard_dishes)
+        reply_markup = InlineKeyboardMarkup(keyboard_categories)
         await query.edit_message_text(
-            text="Выберите одно из блюд на обед:",
+            text="Выберите категорию обедов:",
+            reply_markup=reply_markup
+        )
+    
+    if query.data.startswith("category_"):
+        # Извлекаем выбранную категорию
+        category = query.data.split("_")[1]
+        lunch_generator = context.user_data.get("lunch_generator")
+
+        if not lunch_generator:
+            await query.edit_message_text(
+                text="Ошибка: данные обедов недоступны. Попробуйте снова.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="lunch")]])
+            )
+            return
+
+        # Получаем список блюд для выбранной категории
+        dishes = lunch_generator.get_dishes_by_category(category)
+
+        if not dishes:
+            await query.edit_message_text(
+                text=f"В категории '{category}' нет доступных блюд.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="lunch")]])
+            )
+            return
+
+        # Формируем кнопки для блюд
+        keyboard_dishes = [[InlineKeyboardButton(dish, callback_data=f"dish_{dish}")] for dish in dishes]
+        keyboard_dishes.append([InlineKeyboardButton("Назад", callback_data="lunch")])
+        reply_markup = InlineKeyboardMarkup(keyboard_dishes)
+
+        await query.edit_message_text(
+            text=f"Выберите блюдо из категории '{category}':",
             reply_markup=reply_markup
         )
 
-    # Логика при выборе блюда
+
+
     if query.data.startswith("dish_"):
-        category = query.data.split("_")[1]
-        CURRENT_DISH[query.from_user.id] = category
-        keyboard_dish_options = [
-            [InlineKeyboardButton("Приготовление", callback_data=f"preparation_{category}")],
-            [InlineKeyboardButton("Изменить", callback_data=f"change_{category}")],
+        # Извлекаем название блюда
+        dish_name = query.data.split("_")[1]
+        context.user_data["selected_dish"] = dish_name
+
+        keyboard_dish_actions = [
+            [InlineKeyboardButton("Приготовление", callback_data="preparation")],
             [InlineKeyboardButton("Назад", callback_data="lunch")]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard_dish_options)
+        reply_markup = InlineKeyboardMarkup(keyboard_dish_actions)
+
         await query.edit_message_text(
-            text=f"Вы выбрали блюдо: {context.user_data['lunch_dishes'][category]}. Что вы хотите сделать?",
+            text=f"Вы выбрали блюдо: {dish_name}.",
             reply_markup=reply_markup
         )
+
 
         # Логика для изменения блюда
     if query.data.startswith("change_"):
