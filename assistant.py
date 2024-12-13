@@ -112,6 +112,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         category = query.data.split("_")[1]  # Извлекаем категорию из callback_data
         logger.info(f"Пользователь выбрал категорию: {category}")
 
+        # Сохраняем текущую категорию
+        context.user_data["current_category"] = category
+
         # Получаем объект LunchGenerator
         lunch_generator = context.user_data.get("lunch_generator")
 
@@ -135,7 +138,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
 
         # Формируем кнопки для блюд
-        keyboard_dishes = [[InlineKeyboardButton(dish, callback_data=f"dish_{dish}")] for dish in dishes]
+        keyboard_dishes = [
+            [InlineKeyboardButton(dish, callback_data=f"dish_{i}")] for i, dish in enumerate(dishes)
+        ]
+        context.user_data["dish_mapping"] = {f"dish_{i}": dish for i, dish in enumerate(dishes)}
         keyboard_dishes.append([InlineKeyboardButton("Назад", callback_data="lunch")])
 
         reply_markup = InlineKeyboardMarkup(keyboard_dishes)
@@ -143,6 +149,35 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             text=f"Выберите блюдо из категории '{category}':",
             reply_markup=reply_markup
         )
+
+    elif query.data.startswith("dish_"):
+        # Получаем выбранное блюдо
+        dish_key = query.data
+        dish_name = context.user_data["dish_mapping"].get(dish_key)
+
+        if not dish_name:
+            logger.error(f"Не удалось найти блюдо для ключа {dish_key}.")
+            await query.edit_message_text(
+                text="Ошибка: блюдо не найдено. Попробуйте снова.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]])
+            )
+            return
+
+        # Сохраняем выбранное блюдо
+        context.user_data["selected_dish"] = dish_name
+
+        # Показываем действия для блюда
+        keyboard_dish_actions = [
+            [InlineKeyboardButton("Приготовление", callback_data="preparation")],
+            [InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard_dish_actions)
+
+        await query.edit_message_text(
+            text=f"Вы выбрали блюдо: {dish_name}.",
+            reply_markup=reply_markup
+        )
+
     elif query.data == "preparation":
         # Отображение состава и способа приготовления
         dish_name = context.user_data.get("selected_dish")
@@ -151,7 +186,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if not dish_name or not lunch_generator:
             await query.edit_message_text(
                 text="Ошибка: данные о выбранном блюде недоступны.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="healthy_recipes")]])
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]])
             )
             return
 
