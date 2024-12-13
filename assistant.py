@@ -136,25 +136,26 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if query.data.startswith("preparation_"):
         category = query.data.split("_")[1]
         
-        # Проверяем наличие выбранного блюда
+        # Получаем текущее выбранное блюдо
         if "lunch_dishes" in context.user_data and category in context.user_data["lunch_dishes"]:
             selected_dish = context.user_data["lunch_dishes"][category]
             lunch_generator = context.user_data["lunch_generator"]
             
-            # Получаем детали для текущего блюда
+            # Получаем актуальные детали для нового блюда
             details = lunch_generator.get_dish_details(selected_dish)
             
-            # Отправляем пользователю
+            # Отправляем пользователю детали
             await query.edit_message_text(
                 text=f"{details}",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data=f"dish_{category}")]])
             )
         else:
-            # Если данные отсутствуют, уведомляем пользователя
+            # Обработка ошибок, если данные блюда отсутствуют
             await query.edit_message_text(
-                text="Ошибка: блюдо не найдено. Попробуйте выбрать блюдо заново.",
+                text="Ошибка: Не удалось найти выбранное блюдо. Попробуйте заново.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="lunch")]])
             )
+
 
 
     # Логика для изменения блюда
