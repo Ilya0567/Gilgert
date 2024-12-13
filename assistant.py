@@ -136,25 +136,34 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if query.data.startswith("preparation_"):
         category = query.data.split("_")[1]
         
-        # Получаем текущее выбранное блюдо
+        # Проверяем наличие выбранного блюда
         if "lunch_dishes" in context.user_data and category in context.user_data["lunch_dishes"]:
             selected_dish = context.user_data["lunch_dishes"][category]
             lunch_generator = context.user_data["lunch_generator"]
             
-            # Получаем актуальные детали для нового блюда
-            details = lunch_generator.get_dish_details(selected_dish)
-            
-            # Отправляем пользователю детали
-            await query.edit_message_text(
-                text=f"{details}",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data=f"dish_{category}")]])
-            )
+            try:
+                # Получаем детали для текущего блюда
+                details = lunch_generator.get_dish_details(selected_dish)
+                
+                # Отправляем пользователю детали
+                await query.edit_message_text(
+                    text=f"{details}",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data=f"dish_{category}")]])
+                )
+            except Exception as e:
+                # Логирование ошибки и уведомление пользователя
+                logger.error(f"Ошибка при получении деталей для блюда '{selected_dish}': {str(e)}")
+                await query.edit_message_text(
+                    text="⚠️ Произошла ошибка при получении информации о блюде. Пожалуйста, попробуйте позже.",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data=f"dish_{category}")]])
+                )
         else:
-            # Обработка ошибок, если данные блюда отсутствуют
+            # Обработка случая, если данные о блюде отсутствуют
             await query.edit_message_text(
-                text="Ошибка: Не удалось найти выбранное блюдо. Попробуйте заново.",
+                text="⚠️ Не удалось найти выбранное блюдо. Пожалуйста, вернитесь и выберите блюдо заново.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="lunch")]])
             )
+
 
 
 
