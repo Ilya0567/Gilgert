@@ -17,7 +17,7 @@ class LunchGenerator:
 
         self.lunch = {
             "Первое блюдо": None,
-            "СалатЫ": None,
+            "Салаты": None,
             "Гарниры": None,
             "Основное блюдо": None
         }
