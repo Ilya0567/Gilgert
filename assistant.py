@@ -79,21 +79,24 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # Обработчик нажатия кнопки "Обед"
     if query.data == "lunch":
-        try:
-            lunch_ = lunch.LunchGenerator(data_source=DISHES)
-            dishes = lunch_.lunch  # Получаем словарь с категориями и блюдами
-            # Создаем кнопки для блюд
-            keyboard_dishes = [
-                [InlineKeyboardButton(f"{dish}", callback_data=f"dish_{category}")] for category, dish in dishes.items() if dish
-            ]
-            keyboard_dishes.append([InlineKeyboardButton("Назад", callback_data="healthy_recipes")])
-            reply_markup = InlineKeyboardMarkup(keyboard_dishes)
-            await query.edit_message_text(
-                text="Выберите одно из блюд на обед:",
-                reply_markup=reply_markup
-            )
-        except Exception as e:
-            await query.edit_message_text(f"Произошла ошибка при загрузке обеда: {str(e)}")
+        if "lunch_dishes" not in context.user_data:
+            try:
+                lunch_ = lunch.LunchGenerator(data_source=DISHES)
+                context.user_data["lunch_dishes"] = lunch_.lunch  # Сохраняем список блюд в user_data
+            except Exception as e:
+                await query.edit_message_text(f"Произошла ошибка при загрузке обеда: {str(e)}")
+                return
+
+        dishes = context.user_data["lunch_dishes"]  # Получаем сохраненный список блюд
+        keyboard_dishes = [
+            [InlineKeyboardButton(f"{dish}", callback_data=f"dish_{category}")] for category, dish in dishes.items() if dish
+        ]
+        keyboard_dishes.append([InlineKeyboardButton("Назад", callback_data="healthy_recipes")])
+        reply_markup = InlineKeyboardMarkup(keyboard_dishes)
+        await query.edit_message_text(
+            text="Выберите одно из блюд на обед:",
+            reply_markup=reply_markup
+        )
 
     # Логика при выборе блюда
     if query.data.startswith("dish_"):
@@ -106,7 +109,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard_dish_options)
         await query.edit_message_text(
-            text=f"Вы выбрали блюдо: {category}. Что вы хотите сделать?",
+            text=f"Вы выбрали блюдо: {context.user_data['lunch_dishes'][category]}. Что вы хотите сделать?",
             reply_markup=reply_markup
         )
 
@@ -120,6 +123,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             text=f"Ингредиенты для блюда {dish}:\n\n{ingredients}",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data=f"dish_{category}")]])
         )
+
 
 
     # # Обработчик кнопки "Способ приготовления"
