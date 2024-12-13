@@ -34,14 +34,21 @@ class LunchGenerator:
             else:
                 self.lunch[category] = None
 
+    def add_emoji_to_dish(self, category, dish):
+        """Добавляет эмодзи к категории блюда"""
+        emojis = {
+            "Первое блюдо": "🍲",    # Суп
+            "второе блюдо": "🍖",   # Основное блюдо
+            "гарниры": "🍚",        # Гарнир
+            "салат": "🥗"           # Салат
+        }
+        return f"{emojis.get(category, '🍽')} {dish}" if dish else f"{category}: Нет доступного блюда"
+
     def get_lunch_names(self):
-        """Возвращает строку с названиями блюд для текущего обеда"""
+        """Возвращает строку с названиями блюд для текущего обеда, с эмодзи"""
         lunch_names = []
         for category, dish in self.lunch.items():
-            if dish:
-                lunch_names.append(f"{dish}")
-            else:
-                lunch_names.append(f"{category}: Нет доступного блюда")
+            lunch_names.append(self.add_emoji_to_dish(category, dish))
         return "\n".join(lunch_names)  # Строка с названием блюд
 
     def get_ingredients(self):
@@ -51,11 +58,11 @@ class LunchGenerator:
             if dish and dish != "Нет доступного блюда":
                 ingredient = self.df[self.df["Название завтрака:"] == dish]["Ингредиенты на 1 порцию:"]
                 if not ingredient.empty:
-                    ingredients.append(f"{dish}:\nИнгредиенты: {ingredient.iloc[0]}")
+                    ingredients.append(f"{self.add_emoji_to_dish(category, dish)}:\nИнгредиенты: {ingredient.iloc[0]}")
                 else:
-                    ingredients.append(f"{dish}:\nИнгредиенты не найдены")
+                    ingredients.append(f"{self.add_emoji_to_dish(category, dish)}:\nИнгредиенты не найдены")
             else:
-                ingredients.append(f"Нет доступного блюда")
+                ingredients.append(f"{category}: Нет доступного блюда")
         return "\n\n".join(ingredients)  # Строка с составами блюд
 
     def get_cooking_instructions(self):
@@ -65,9 +72,9 @@ class LunchGenerator:
             if dish and dish != "Нет доступного блюда":
                 instruction = self.df[self.df["Название завтрака:"] == dish]["Приготовление:"]
                 if not instruction.empty:
-                    instructions.append(f"{dish}:\nПриготовление: {instruction.iloc[0]}")
+                    instructions.append(f"{self.add_emoji_to_dish(category, dish)}:\nПриготовление: {instruction.iloc[0]}")
                 else:
-                    instructions.append(f"{dish}:\nСпособ приготовления не найден")
+                    instructions.append(f"{self.add_emoji_to_dish(category, dish)}:\nСпособ приготовления не найден")
             else:
-                instructions.append(f"Нет доступного блюда")
+                instructions.append(f"{category}: Нет доступного блюда")
         return "\n\n".join(instructions)  # Строка с рецептами блюд
