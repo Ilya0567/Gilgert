@@ -35,21 +35,25 @@ class LunchGenerator:
                 self.lunch[category] = None
 
     def add_emoji_to_dish(self, category, dish):
-        """Добавляет эмодзи к категории блюда"""
+        """Добавляет эмодзи с двух сторон строки"""
         emojis = {
             "Первое блюдо": "🍲",    # Суп
             "второе блюдо": "🍖",   # Основное блюдо
             "гарниры": "🍚",        # Гарнир
             "салат": "🥗"           # Салат
         }
-        return f"{emojis.get(category, '🍽')} {dish}" if dish else f"{category}: Нет доступного блюда"
+        emoji = emojis.get(category, "🍽")  # По умолчанию эмодзи для тарелки
+        if dish:
+            return f"{emoji} {dish} {emoji}".center(40)  # Добавляем эмодзи с двух сторон и центрируем
+        else:
+            return f"{category}: Нет доступного блюда".center(40)  # Центрируем строку
 
     def get_lunch_names(self):
         """Возвращает строку с названиями блюд для текущего обеда, с эмодзи"""
         lunch_names = []
         for category, dish in self.lunch.items():
             lunch_names.append(self.add_emoji_to_dish(category, dish))
-        return "\n     ".join(lunch_names)  # Строка с названием блюд
+        return "\n".join(lunch_names)  # Строка с названием блюд
 
     def get_ingredients(self):
         """Возвращает строку с составами для всех выбранных блюд"""
@@ -62,7 +66,7 @@ class LunchGenerator:
                 else:
                     ingredients.append(f"{self.add_emoji_to_dish(category, dish)}:\nИнгредиенты не найдены")
             else:
-                ingredients.append(f"{category}: Нет доступного блюда")
+                ingredients.append(f"{category}: Нет доступного блюда".center(40))
         return "\n\n".join(ingredients)  # Строка с составами блюд
 
     def get_cooking_instructions(self):
@@ -76,5 +80,5 @@ class LunchGenerator:
                 else:
                     instructions.append(f"{self.add_emoji_to_dish(category, dish)}:\nСпособ приготовления не найден")
             else:
-                instructions.append(f"{category}: Нет доступного блюда")
+                instructions.append(f"{category}: Нет доступного блюда".center(40))
         return "\n\n".join(instructions)  # Строка с рецептами блюд
