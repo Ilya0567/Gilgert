@@ -144,29 +144,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
 
-        # Логика для изменения блюда
-    if query.data.startswith("change_"):
-        category = query.data.split("_")[1]
-        lunch_generator = context.user_data["lunch_generator"]
-
-        # Меняем блюдо на новое
-        new_dish = lunch_generator.change_dish(category)
-        context.user_data["lunch_dishes"][category] = new_dish  # Сохраняем новое блюдо
-
-        # Обновляем кнопки с новым блюдом
-        keyboard_dish_options = [
-            [InlineKeyboardButton("Приготовление", callback_data=f"preparation_{category}")],
-            [InlineKeyboardButton("Изменить", callback_data=f"change_{category}")],
-            [InlineKeyboardButton("Назад", callback_data="lunch")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard_dish_options)
-
-        # Отправляем пользователю сообщение с новым блюдом
-        await query.edit_message_text(
-            text=f"Блюдо категории '{category}' изменено. Новое блюдо: {new_dish}.",
-            reply_markup=reply_markup
-        )
-
     # Логика для отображения ингредиентов и способа приготовления
     if query.data.startswith("preparation_"):
         category = query.data.split("_")[1]
