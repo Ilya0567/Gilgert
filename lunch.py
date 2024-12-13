@@ -35,7 +35,7 @@ class LunchGenerator:
                 self.lunch[category] = None
 
     def add_emoji_to_dish(self, category, dish):
-        """Добавляет эмодзи с двух сторон строки"""
+        """Добавляет эмодзи к категории блюда"""
         emojis = {
             "Первое блюдо": "🍲",    # Суп
             "второе блюдо": "🍖",   # Основное блюдо
@@ -44,9 +44,9 @@ class LunchGenerator:
         }
         emoji = emojis.get(category, "🍽")  # По умолчанию эмодзи для тарелки
         if dish:
-            return f"{emoji} {dish} {emoji}".center(40)  # Добавляем эмодзи с двух сторон и центрируем
+            return f"                    {emoji} {dish}"  # 20 пробелов в начале строки
         else:
-            return f"{category}: Нет доступного блюда".center(40)  # Центрируем строку
+            return f"                    {category}: Нет доступного блюда"  # 20 пробелов в начале строки
 
     def get_lunch_names(self):
         """Возвращает строку с названиями блюд для текущего обеда, с эмодзи"""
@@ -66,7 +66,7 @@ class LunchGenerator:
                 else:
                     ingredients.append(f"{self.add_emoji_to_dish(category, dish)}:\nИнгредиенты не найдены")
             else:
-                ingredients.append(f"{category}: Нет доступного блюда".center(40))
+                ingredients.append(f"                    {category}: Нет доступного блюда")  # 20 пробелов в начале строки
         return "\n\n".join(ingredients)  # Строка с составами блюд
 
     def get_cooking_instructions(self):
@@ -80,5 +80,5 @@ class LunchGenerator:
                 else:
                     instructions.append(f"{self.add_emoji_to_dish(category, dish)}:\nСпособ приготовления не найден")
             else:
-                instructions.append(f"{category}: Нет доступного блюда".center(40))
+                instructions.append(f"                    {category}: Нет доступного блюда")  # 20 пробелов в начале строки
         return "\n\n".join(instructions)  # Строка с рецептами блюд
