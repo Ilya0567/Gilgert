@@ -64,7 +64,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     elif query.data == 'start':
         await start(update, context)
 
-    if query.data == "healthy_recipes":
+    elif query.data == "healthy_recipes":
         # Показываем основные категории здоровых рецептов
         keyboard_recipes = [
             [InlineKeyboardButton("Завтраки", callback_data="breakfast")],
@@ -79,8 +79,22 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             reply_markup=reply_markup
         )
 
-    elif query.data == "lunch":
-        # Показываем категории блюд для обедов
+    if query.data == "lunch":
+        # Инициализация LunchGenerator, если его нет в context.user_data
+        if "lunch_generator" not in context.user_data:
+            try:
+                lunch_generator = lunch.LunchGenerator(data_source=DISHES)
+                context.user_data["lunch_generator"] = lunch_generator  # Сохраняем объект
+                logger.info("LunchGenerator успешно инициализирован.")
+            except Exception as e:
+                logger.error(f"Ошибка при загрузке LunchGenerator: {str(e)}")
+                await query.edit_message_text(
+                    text=f"Ошибка при загрузке обедов: {str(e)}",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="healthy_recipes")]])
+                )
+                return
+
+        # Показываем категории обедов
         keyboard_categories = [
             [InlineKeyboardButton("Первые", callback_data="category_Первое блюдо")],
             [InlineKeyboardButton("Основные", callback_data="category_второе блюдо")],
@@ -93,6 +107,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             text="Выберите категорию блюд обеда:",
             reply_markup=reply_markup
         )
+
     elif query.data.startswith("category_"):
         category = query.data.split("_")[1]  # Извлекаем категорию из callback_data
         logger.info(f"Пользователь выбрал категорию: {category}")
