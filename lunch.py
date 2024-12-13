@@ -34,6 +34,32 @@ class LunchGenerator:
             else:
                 self.lunch[category] = None
 
+    def change_dish(self, category):
+        """
+        Меняет текущее блюдо в указанной категории на случайное блюдо того же типа.
+        :param category: Категория блюда (например, "Первое блюдо", "гарниры").
+        :return: Новое блюдо или сообщение об отсутствии доступных блюд.
+        """
+        if category not in self.lunch:
+            raise ValueError(f"Категория '{category}' не найдена в текущем обеде.")
+
+        # Фильтруем доступные блюда по категории, исключая текущее
+        current_dish = self.lunch[category]
+        available_dishes = self.df[self.df["Тип блюда"] == category]
+        
+        if not available_dishes.empty:
+            # Исключаем текущее блюдо из списка
+            available_dishes = available_dishes[available_dishes["Название завтрака:"] != current_dish]
+            if not available_dishes.empty:
+                # Выбираем случайное блюдо
+                selected_dish = available_dishes.sample(1).iloc[0]
+                self.lunch[category] = selected_dish["Название завтрака:"]
+                return self.lunch[category]
+            else:
+                return f"Все доступные блюда категории '{category}' уже выбраны."
+        else:
+            return f"Нет доступных блюд для категории '{category}'."
+
     def add_emoji_to_dish(self, category, dish):
         """Добавляет эмодзи к категории блюда"""
         emojis = {

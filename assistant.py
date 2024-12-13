@@ -79,15 +79,16 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # Обработчик нажатия кнопки "Обед"
     if query.data == "lunch":
-        if "lunch_dishes" not in context.user_data:
+        if "lunch_generator" not in context.user_data:
             try:
                 lunch_ = lunch.LunchGenerator(data_source=DISHES)
-                context.user_data["lunch_dishes"] = lunch_.lunch  # Сохраняем список блюд в user_data
+                context.user_data["lunch_generator"] = lunch_
+                context.user_data["lunch_dishes"] = lunch_.lunch  # Сохраняем текущий обед
             except Exception as e:
                 await query.edit_message_text(f"Произошла ошибка при загрузке обеда: {str(e)}")
                 return
 
-        dishes = context.user_data["lunch_dishes"]  # Получаем сохраненный список блюд
+        dishes = context.user_data["lunch_dishes"]
         keyboard_dishes = [
             [InlineKeyboardButton(f"{dish}", callback_data=f"dish_{category}")] for category, dish in dishes.items() if dish
         ]
@@ -104,7 +105,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         CURRENT_DISH[query.from_user.id] = category
         keyboard_dish_options = [
             [InlineKeyboardButton("Ингредиенты", callback_data=f"ingredients_{category}")],
-            [InlineKeyboardButton("Изменить", callback_data="change_dish")],
+            [InlineKeyboardButton("Изменить", callback_data=f"change_{category}")],
             [InlineKeyboardButton("Назад", callback_data="lunch")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard_dish_options)
@@ -113,31 +114,36 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             reply_markup=reply_markup
         )
 
+    # Логика для изменения блюда
+    if query.data.startswith("change_"):
+        category = query.data.split("_")[1]
+        lunch_generator = context.user_data["lunch_generator"]
+        new_dish = lunch_generator.change_dish(category)
+        context.user_data["lunch_dishes"][category] = new_dish
+
+        keyboard_dish_options = [
+            [InlineKeyboardButton("Ингредиенты", callback_data=f"ingredients_{category}")],
+            [InlineKeyboardButton("Изменить", callback_data=f"change_{category}")],
+            [InlineKeyboardButton("Назад", callback_data="lunch")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard_dish_options)
+        await query.edit_message_text(
+            text=f"Блюдо категории '{category}' изменено. Новое блюдо: {new_dish}.",
+            reply_markup=reply_markup
+        )
+
     # Логика для отображения ингредиентов
     if query.data.startswith("ingredients_"):
         category = query.data.split("_")[1]
-        dish = CURRENT_DISH.get(query.from_user.id)
-        lunch_ = lunch.LunchGenerator(data_source=DISHES)
-        ingredients = lunch_.get_ingredients()
+        selected_dish = context.user_data["lunch_dishes"][category]
+        lunch_generator = context.user_data["lunch_generator"]
+        ingredients = lunch_generator.get_ingredients()
+
         await query.edit_message_text(
-            text=f"Ингредиенты для блюда {dish}:\n\n{ingredients}",
+            text=f"Ингредиенты для блюда '{selected_dish}':\n\n{ingredients}",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data=f"dish_{category}")]])
         )
 
-
-
-    # # Обработчик кнопки "Способ приготовления"
-    # if query.data == "recipe_method":
-    #     method = "1. Залейте овсянку горячей водой.\n2. Добавьте нарезанные фрукты и мед.\n3. Хорошо перемешайте."
-    #     keyboard_method_options = [
-    #         [InlineKeyboardButton("Назад", callback_data="ingredients_breakfast")],
-    #         [InlineKeyboardButton("Главное меню", callback_data="start")]
-    #     ]
-    #     reply_markup = InlineKeyboardMarkup(keyboard_method_options)
-    #     await query.edit_message_text(
-    #         text=f"Способ приготовления:\n\n{method}",
-    #         reply_markup=reply_markup
-    #     )
         
     if query.data == "start":
         await update.callback_query.edit_message_text(
