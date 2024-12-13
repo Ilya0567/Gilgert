@@ -97,7 +97,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # Показываем категории обедов
         keyboard_categories = [
             [InlineKeyboardButton("Первые", callback_data="category_Первое блюдо")],
-            [InlineKeyboardButton("Основные", callback_data="category_Второе блюдо")],
+            [InlineKeyboardButton("Основные", callback_data="category_Основное блюдо")],
             [InlineKeyboardButton("Гарниры", callback_data="category_Гарниры")],
             [InlineKeyboardButton("Салаты", callback_data="category_Салаты")],
             [InlineKeyboardButton("Назад", callback_data="healthy_recipes")]
