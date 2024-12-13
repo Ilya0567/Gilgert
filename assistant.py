@@ -79,6 +79,18 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # Обработчик нажатия кнопки "Обед"
     if query.data == "lunch":
+        # Проверяем, существует ли объект LunchGenerator
+        if "lunch_generator" not in context.user_data:
+            try:
+                lunch_generator = lunch.LunchGenerator(data_source=DISHES)
+                context.user_data["lunch_generator"] = lunch_generator  # Сохраняем объект
+            except Exception as e:
+                await query.edit_message_text(
+                    text=f"Ошибка при загрузке обедов: {str(e)}",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="healthy_recipes")]])
+                )
+                return
+
         # Показываем категории обедов
         keyboard_categories = [
             [InlineKeyboardButton("Первые", callback_data="category_Первое блюдо")],
@@ -92,7 +104,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             text="Выберите категорию обедов:",
             reply_markup=reply_markup
         )
-    
+
     if query.data.startswith("category_"):
         # Извлекаем выбранную категорию
         category = query.data.split("_")[1]
