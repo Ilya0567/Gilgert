@@ -80,10 +80,10 @@ class LunchGenerator:
         """
         Возвращает ингредиенты и способ приготовления для конкретного блюда.
         """
-        if dish_name not in self.df["Название завтрака:"].values:
+        if dish_name not in self.df["Название блюда:"].values:
             return f"Блюдо '{dish_name}' не найдено в базе данных."
 
-        dish_data = self.df[self.df["Название завтрака:"] == dish_name].iloc[0]
+        dish_data = self.df[self.df["Название блюда:"] == dish_name].iloc[0]
         ingredients = dish_data["Ингредиенты на 1 порцию:"] if not pd.isna(dish_data["Ингредиенты на 1 порцию:"]) else "Ингредиенты не найдены."
         preparation = dish_data["Приготовление:"] if not pd.isna(dish_data["Приготовление:"]) else "Способ приготовления не найден."
 
@@ -99,4 +99,4 @@ class LunchGenerator:
         """
         if category not in self.df["Тип блюда"].unique():
             return []
-        return self.df[self.df["Тип блюда"] == category]["Название завтрака:"].tolist()
+        return self.df[self.df["Тип блюда"] == category]["Название блюда:"].tolist()
