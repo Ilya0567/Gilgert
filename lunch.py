@@ -37,21 +37,16 @@ class LunchGenerator:
     def change_dish(self, category):
         """
         Меняет текущее блюдо в указанной категории на случайное блюдо того же типа.
-        :param category: Категория блюда (например, "Первое блюдо", "гарниры").
-        :return: Новое блюдо или сообщение об отсутствии доступных блюд.
         """
         if category not in self.lunch:
             raise ValueError(f"Категория '{category}' не найдена в текущем обеде.")
 
-        # Фильтруем доступные блюда по категории, исключая текущее
         current_dish = self.lunch[category]
         available_dishes = self.df[self.df["Тип блюда"] == category]
         
         if not available_dishes.empty:
-            # Исключаем текущее блюдо из списка
             available_dishes = available_dishes[available_dishes["Название завтрака:"] != current_dish]
             if not available_dishes.empty:
-                # Выбираем случайное блюдо
                 selected_dish = available_dishes.sample(1).iloc[0]
                 self.lunch[category] = selected_dish["Название завтрака:"]
                 return self.lunch[category]
@@ -68,43 +63,32 @@ class LunchGenerator:
             "гарниры": "🍚",        # Гарнир
             "салат": "🥗"           # Салат
         }
-        emoji = emojis.get(category, "🍽")  # По умолчанию эмодзи для тарелки
+        emoji = emojis.get(category, "🍽")
         if dish:
-            return f"                    {emoji} {dish}"  # 20 пробелов в начале строки
+            return f"                    {emoji} {dish}"
         else:
-            return f"                    {category}: Нет доступного блюда"  # 20 пробелов в начале строки
+            return f"                    {category}: Нет доступного блюда"
 
     def get_lunch_names(self):
         """Возвращает строку с названиями блюд для текущего обеда, с эмодзи"""
         lunch_names = []
         for category, dish in self.lunch.items():
             lunch_names.append(self.add_emoji_to_dish(category, dish))
-        return "\n".join(lunch_names)  # Строка с названием блюд
+        return "\n".join(lunch_names)
 
-    def get_ingredients(self):
-        """Возвращает строку с составами для всех выбранных блюд"""
-        ingredients = []
-        for category, dish in self.lunch.items():
-            if dish and dish != "Нет доступного блюда":
-                ingredient = self.df[self.df["Название завтрака:"] == dish]["Ингредиенты на 1 порцию:"]
-                if not ingredient.empty:
-                    ingredients.append(f"{self.add_emoji_to_dish(category, dish)}:\nИнгредиенты: {ingredient.iloc[0]}")
-                else:
-                    ingredients.append(f"{self.add_emoji_to_dish(category, dish)}:\nИнгредиенты не найдены")
-            else:
-                ingredients.append(f"                    {category}: Нет доступного блюда")  # 20 пробелов в начале строки
-        return "\n\n".join(ingredients)  # Строка с составами блюд
+    def get_dish_details(self, dish_name):
+        """
+        Возвращает ингредиенты и способ приготовления для конкретного блюда.
+        """
+        if dish_name not in self.df["Название завтрака:"].values:
+            return f"Блюдо '{dish_name}' не найдено в базе данных."
 
-    def get_cooking_instructions(self):
-        """Возвращает строку с рецептами для всех выбранных блюд"""
-        instructions = []
-        for category, dish in self.lunch.items():
-            if dish and dish != "Нет доступного блюда":
-                instruction = self.df[self.df["Название завтрака:"] == dish]["Приготовление:"]
-                if not instruction.empty:
-                    instructions.append(f"{self.add_emoji_to_dish(category, dish)}:\nПриготовление: {instruction.iloc[0]}")
-                else:
-                    instructions.append(f"{self.add_emoji_to_dish(category, dish)}:\nСпособ приготовления не найден")
-            else:
-                instructions.append(f"                    {category}: Нет доступного блюда")  # 20 пробелов в начале строки
-        return "\n\n".join(instructions)  # Строка с рецептами блюд
+        dish_data = self.df[self.df["Название завтрака:"] == dish_name].iloc[0]
+        ingredients = dish_data["Ингредиенты на 1 порцию:"] if not pd.isna(dish_data["Ингредиенты на 1 порцию:"]) else "Ингредиенты не найдены."
+        preparation = dish_data["Приготовление:"] if not pd.isna(dish_data["Приготовление:"]) else "Способ приготовления не найден."
+
+        return (
+            f"🍴 {dish_name}\n\n"
+            f"Ингредиенты:\n{ingredients}\n\n"
+            f"Приготовление:\n{preparation}"
+        )

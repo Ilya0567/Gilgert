@@ -39,7 +39,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             reply_markup=reply_markup
         )
 
-# Функция для обработки нажатий на кнопки
+# Обработчик нажатий на кнопки
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
@@ -104,7 +104,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         category = query.data.split("_")[1]
         CURRENT_DISH[query.from_user.id] = category
         keyboard_dish_options = [
-            [InlineKeyboardButton("Ингредиенты", callback_data=f"ingredients_{category}")],
+            [InlineKeyboardButton("Приготовление", callback_data=f"preparation_{category}")],
             [InlineKeyboardButton("Изменить", callback_data=f"change_{category}")],
             [InlineKeyboardButton("Назад", callback_data="lunch")]
         ]
@@ -113,6 +113,37 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             text=f"Вы выбрали блюдо: {context.user_data['lunch_dishes'][category]}. Что вы хотите сделать?",
             reply_markup=reply_markup
         )
+
+    # Логика для изменения блюда
+    if query.data.startswith("change_"):
+        category = query.data.split("_")[1]
+        lunch_generator = context.user_data["lunch_generator"]
+        new_dish = lunch_generator.change_dish(category)
+        context.user_data["lunch_dishes"][category] = new_dish
+
+        keyboard_dish_options = [
+            [InlineKeyboardButton("Приготовление", callback_data=f"preparation_{category}")],
+            [InlineKeyboardButton("Изменить", callback_data=f"change_{category}")],
+            [InlineKeyboardButton("Назад", callback_data="lunch")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard_dish_options)
+        await query.edit_message_text(
+            text=f"Блюдо категории '{category}' изменено. Новое блюдо: {new_dish}.",
+            reply_markup=reply_markup
+        )
+
+    # Логика для отображения ингредиентов и способа приготовления
+    if query.data.startswith("preparation_"):
+        category = query.data.split("_")[1]
+        selected_dish = context.user_data["lunch_dishes"][category]
+        lunch_generator = context.user_data["lunch_generator"]
+        details = lunch_generator.get_dish_details(selected_dish)
+
+        await query.edit_message_text(
+            text=f"{details}",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data=f"dish_{category}")]])
+        )
+
 
     # Логика для изменения блюда
     if query.data.startswith("change_"):
