@@ -17,9 +17,9 @@ class LunchGenerator:
 
         self.lunch = {
             "Первое блюдо": None,
-            "салат": None,
-            "гарниры": None,
-            "второе блюдо": None
+            "СалатЫ": None,
+            "Гарниры": None,
+            "Основное блюдо": None
         }
         self.create_lunch()
 
@@ -30,7 +30,7 @@ class LunchGenerator:
             available_dishes = self.df[self.df["Тип блюда"] == category]
             if not available_dishes.empty:
                 selected_dish = available_dishes.sample(1).iloc[0]
-                self.lunch[category] = selected_dish["Название завтрака:"]
+                self.lunch[category] = selected_dish["Название блюда:"]
             else:
                 self.lunch[category] = None
 
@@ -45,10 +45,10 @@ class LunchGenerator:
         available_dishes = self.df[self.df["Тип блюда"] == category]
         
         if not available_dishes.empty:
-            available_dishes = available_dishes[available_dishes["Название завтрака:"] != current_dish]
+            available_dishes = available_dishes[available_dishes["Название блюда:"] != current_dish]
             if not available_dishes.empty:
                 selected_dish = available_dishes.sample(1).iloc[0]
-                self.lunch[category] = selected_dish["Название завтрака:"]
+                self.lunch[category] = selected_dish["Название блюда:"]
                 return self.lunch[category]
             else:
                 return f"Все доступные блюда категории '{category}' уже выбраны."

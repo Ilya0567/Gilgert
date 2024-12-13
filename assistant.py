@@ -97,9 +97,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # Показываем категории обедов
         keyboard_categories = [
             [InlineKeyboardButton("Первые", callback_data="category_Первое блюдо")],
-            [InlineKeyboardButton("Основные", callback_data="category_второе блюдо")],
-            [InlineKeyboardButton("Гарниры", callback_data="category_гарниры")],
-            [InlineKeyboardButton("Салаты", callback_data="category_салат")],
+            [InlineKeyboardButton("Основные", callback_data="category_Второе блюдо")],
+            [InlineKeyboardButton("Гарниры", callback_data="category_Гарниры")],
+            [InlineKeyboardButton("Салаты", callback_data="category_Салаты")],
             [InlineKeyboardButton("Назад", callback_data="healthy_recipes")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard_categories)
@@ -174,7 +174,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply_markup = InlineKeyboardMarkup(keyboard_dish_actions)
 
         await query.edit_message_text(
-            text=f"Вы выбрали блюдо: {dish_name}.",
+            text=f"Вы выбрали: {dish_name}.",
             reply_markup=reply_markup
         )
 
