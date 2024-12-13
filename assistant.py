@@ -106,7 +106,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
     if query.data.startswith("category_"):
-        # Извлекаем выбранную категорию
+        # Извлекаем категорию из callback_data
         category = query.data.split("_")[1]
         lunch_generator = context.user_data.get("lunch_generator")
 
@@ -117,7 +117,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             )
             return
 
-        # Получаем список блюд для выбранной категории
+        # Получаем список блюд для указанной категории
         dishes = lunch_generator.get_dishes_by_category(category)
 
         if not dishes:
@@ -127,15 +127,18 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             )
             return
 
-        # Формируем кнопки для блюд
+        # Генерируем кнопки для всех блюд в категории
         keyboard_dishes = [[InlineKeyboardButton(dish, callback_data=f"dish_{dish}")] for dish in dishes]
-        keyboard_dishes.append([InlineKeyboardButton("Назад", callback_data="lunch")])
+        keyboard_dishes.append([InlineKeyboardButton("Назад", callback_data="lunch")])  # Кнопка для возврата назад
+
         reply_markup = InlineKeyboardMarkup(keyboard_dishes)
 
+        # Отправляем список блюд пользователю
         await query.edit_message_text(
             text=f"Выберите блюдо из категории '{category}':",
             reply_markup=reply_markup
         )
+
 
 
 
