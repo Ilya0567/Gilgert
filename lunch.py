@@ -49,7 +49,7 @@ class LunchGenerator:
         lunch_names = []
         for category, dish in self.lunch.items():
             lunch_names.append(self.add_emoji_to_dish(category, dish))
-        return "\n".join(lunch_names)  # Строка с названием блюд
+        return "\n     ".join(lunch_names)  # Строка с названием блюд
 
     def get_ingredients(self):
         """Возвращает строку с составами для всех выбранных блюд"""
