@@ -89,11 +89,11 @@ class ChatGPTClient:
                 text += chunk.choices[0].delta.content
 
         # Вывод текста с переносами
-        formatted_response = ""
-        for i in range(0, len(text), line_width):
-            formatted_response += text[i:i + line_width] + "\n"
+        # formatted_response = ""
+        # for i in range(0, len(text), line_width):
+        #     formatted_response += text[i:i + line_width] + "\n"
 
-        return formatted_response.strip()
+        return text
 
 # Пример использования
 if __name__ == "__main__":
