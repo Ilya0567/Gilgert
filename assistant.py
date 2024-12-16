@@ -259,10 +259,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                                        text=f'Сообщение №{question_id} от пользователя {user_name}:\n{question}')
         
     # обработчик вопросов языковой моделью
-    elif context.user_data.get('ask_question'):
+    elif context.user_data.get('awaiting_gpt_question'):
         # Получаем текст вопроса пользователя
         user_question = update.message.text
-        context.user_data['ask_question'] = False  # Сбрасываем флаг ожидания вопроса
+        context.user_data['awaiting_gpt_question'] = False  # Сбрасываем флаг ожидания вопроса
         
         try:
             # Вызываем модель ChatGPT для генерации ответа
