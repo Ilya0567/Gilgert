@@ -5,12 +5,16 @@ import pandas as pd
 import logging
 
 from data_operation import save_user_data, check_product, id_request
+import gpt_35
 import lunch
-from config import DATA_FILE, TOKEN_BOT, CHAT_ID, DISHES
+from config import DATA_FILE, TOKEN_BOT, CHAT_ID, DISHES, KEY
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Инициализация GPT-клиента
+GPT_CLIENT = gpt_35.ChatGPTClient(api_key=KEY)
 
 # Глобальная переменная для хранения выбранного блюда
 CURRENT_DISH = {}
@@ -19,7 +23,8 @@ CURRENT_DISH = {}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [
         [InlineKeyboardButton("О нас", callback_data='about')],
-        [InlineKeyboardButton("У меня вопрос", callback_data='ask_question')],
+        [InlineKeyboardButton("Задать вопрос", callback_data='gpt')],
+        # [InlineKeyboardButton("Задать вопрос", callback_data='ask_question')],
         [InlineKeyboardButton("Проверить продукт", callback_data="check_product")],
         [InlineKeyboardButton("Здоровые рецепты", callback_data="healthy_recipes")]
     ]
@@ -56,8 +61,13 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
         await query.edit_message_text(text=about_text, reply_markup=main_menu_keyboard)
     elif query.data == 'ask_question':
-        await query.edit_message_text(text="❓ Пожалуйста, задайте свой вопрос.", reply_markup=main_menu_keyboard)
-        context.user_data['awaiting_question'] = True
+        # Информируем пользователя о вводе вопроса
+        await query.edit_message_text(
+            text="❓ Пожалуйста, задайте ваш вопрос.\n\n"
+            "Как только вы отправите сообщение, я постараюсь ответить вам.",
+            reply_markup=main_menu_keyboard
+        )
+        context.user_data['awaiting_gpt_question'] = True
     elif query.data == 'check_product':
         await query.edit_message_text(text="🔍 Пожалуйста, введите название продукта, который Вас интересует.", reply_markup=main_menu_keyboard)
         context.user_data['check_product'] = True
@@ -78,6 +88,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             text="Выберите категорию здоровых рецептов:",
             reply_markup=reply_markup
         )
+   
 
     if query.data == "lunch":
         # Инициализация LunchGenerator, если его нет в context.user_data
@@ -246,6 +257,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # перенаправление вопроса экспертам
         await context.bot.send_message(chat_id=CHAT_ID, 
                                        text=f'Сообщение №{question_id} от пользователя {user_name}:\n{question}')
+        
+    # обработчик вопросов языковой моделью
+    elif context.user_data.get('awaiting_gpt_question'):
+        # Получаем текст вопроса пользователя
+        user_question = update.message.text
+        context.user_data['awaiting_gpt_question'] = False  # Сбрасываем флаг ожидания вопроса
+        
+        try:
+            # Вызываем модель ChatGPT для генерации ответа
+            gpt_response = GPT_CLIENT.generate_response(user_message=user_question)
+            await update.message.reply_text(
+                text=f"{gpt_response}",
+                reply_markup=main_menu_keyboard
+            )
+        except Exception as e:
+            # Обрабатываем возможные ошибки
+            await update.message.reply_text(
+                text=f"⚠️ Произошла ошибка при обработке вашего вопроса:\n{str(e)}",
+                reply_markup=main_menu_keyboard
+            )
     # если пользователь проверяет продукт
     elif context.user_data.get('check_product'): 
         timestamp = update.message.date.timestamp()
