@@ -59,7 +59,7 @@ class ChatGPTClient:
         :param model: Модель для использования (по умолчанию "gpt-3.5-turbo")
         :param temperature: Креативность модели (по умолчанию 0.7)
         """
-        self.client = OpenAI(api_key=api_key, max_retries=50)
+        self.client = OpenAI(api_key=api_key)
         self.model = model
         self.temperature = temperature
 
