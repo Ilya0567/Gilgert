@@ -59,7 +59,7 @@ class DrinksGenerator:
         """
         Возвращает строку с названием, ингредиентами и приготовлением.
         """
-        row = self.df[self.df["Название"] == drink_name]
+        row = self.df[self.df["Название:"] == drink_name]
         if row.empty:
             return f"Напиток «{drink_name}» не найден."
 
