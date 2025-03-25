@@ -3,7 +3,8 @@ from telegram.ext import Updater, ApplicationBuilder, CommandHandler, MessageHan
 from collections.abc import Mapping
 import pandas as pd
 import logging
-
+import os
+# Импорт функций
 from data_operation import save_user_data, check_product, id_request
 import gpt_35
 import lunch
