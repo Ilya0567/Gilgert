@@ -1,2 +1,3 @@
 # states.py
+
 MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES = range(4)
