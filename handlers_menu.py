@@ -39,9 +39,12 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Обработка нажатий на кнопки главного меню.
     """
+    
     query = update.callback_query
     await query.answer()
     data = query.data
+
+    logger.debug(data)
 
     if data == 'about':
         # Ставим старый текст "О нас":
