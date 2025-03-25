@@ -53,7 +53,7 @@ class DrinksGenerator:
         Возвращает список (строк) названий напитков, у которых 'Блюдо из' == cat.
         """
         subset = self.df[self.df["Блюдо из"] == cat]
-        return subset["Название"].tolist()
+        return subset["Название:"].tolist()
 
     def get_drink_details(self, drink_name: str):
         """
