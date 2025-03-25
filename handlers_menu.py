@@ -3,14 +3,15 @@ import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
-# Состояния
 from states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
-
 
 logger = logging.getLogger(__name__)
 
-
 async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Хендлер для команды /start.
+    Показывает приветственное сообщение и клавиатуру главного меню.
+    """
     keyboard = [
         [InlineKeyboardButton("О нас", callback_data='about')],
         [InlineKeyboardButton("Задать вопрос (GPT)", callback_data='ask_question')],
@@ -19,26 +20,37 @@ async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    # Вот восстанавливаем ваш старый текст приветствия:
+    welcome_text = (
+        "👋 Привет! Я ваш помощник, созданный специально для помощи людям с синдромом Жильбера.\n\n"
+        "Я могу помочь Вам с рекомендациями по продуктам питания. Пожалуйста, используйте кнопку ниже, чтобы узнать, "
+        "можно ли есть определенный продукт. Также Вы можете посмотреть собранные мной вкусные здоровые рецепты.\n\n"
+        "✨ Нажмите на кнопку 'Проверить продукт', чтобы начать."
+    )
+
     if update.message:
-        await update.message.reply_text(
-            text="👋 Привет! Я ваш помощник...",
-            reply_markup=reply_markup
-        )
+        await update.message.reply_text(text=welcome_text, reply_markup=reply_markup)
     elif update.callback_query:
-        await update.callback_query.edit_message_text(
-            text="👋 Привет! Я ваш помощник...",
-            reply_markup=reply_markup
-        )
+        await update.callback_query.edit_message_text(text=welcome_text, reply_markup=reply_markup)
     return MENU
 
 
 async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обработка нажатий на кнопки главного меню.
+    """
     query = update.callback_query
     await query.answer()
     data = query.data
 
     if data == 'about':
-        about_text = "🤖 «PYOOTS» — ... (описание)"
+        # Ставим старый текст "О нас":
+        about_text = (
+            "🤖 «PYOOTS» — это интеллектуальный помощник, созданный специально для людей с синдромом Жильбера.\n\n"
+            "🏥 Он призван поддержать пользователей в повседневном уходе за здоровьем и сделать образ жизни комфортнее.\n\n"
+            "💙 Бот уже применяет искусственный интеллект для предоставления полезных рекомендаций, "
+            "а в будущем функциональность будет расширяться, обеспечивая ещё более точные и персонализированные советы."
+        )
         await query.edit_message_text(
             text=about_text,
             reply_markup=InlineKeyboardMarkup([
@@ -48,8 +60,10 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return MENU
 
     elif data == 'ask_question':
+        # Текст при переходе к GPT
         await query.edit_message_text(
-            text="❓ Введите ваш вопрос для GPT:",
+            text="❓ Пожалуйста, задайте ваш вопрос.\n\n"
+                 "Как только вы отправите сообщение, я постараюсь ответить вам.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("Отмена", callback_data='back_to_menu')]
             ])
@@ -58,7 +72,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == 'check_product':
         await query.edit_message_text(
-            text="🔍 Введите название продукта:",
+            text="🔍 Пожалуйста, введите название продукта, который Вас интересует:",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("Отмена", callback_data='back_to_menu')]
             ])
@@ -67,7 +81,6 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == 'healthy_recipes':
         # Меню, где мы показываем «завтраки», «обеды», «ужины»
-        # (Убираем "напитки" - оно теперь внутри подменю)
         await query.edit_message_text(
             text="Выберите прием пищи:",
             reply_markup=InlineKeyboardMarkup([
@@ -86,6 +99,10 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Общий fallback (используется при /cancel).
+    Завершает диалог и ConversationHandler.
+    """
     if update.message:
         await update.message.reply_text("Диалог прерван. Введите /start заново.")
     elif update.callback_query:
