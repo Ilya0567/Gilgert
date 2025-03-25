@@ -8,6 +8,8 @@ from telegram.ext import (
     filters
 )
 
+from states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
+
 # Импорт хендлеров из отдельных файлов
 from handlers_menu import start_menu, menu_callback, cancel
 from handlers_gpt import gpt_question_answer
@@ -17,8 +19,6 @@ from handlers_recipes import recipes_submenu_callback
 # Импорт конфигурации (TOKEN_BOT)
 from config import TOKEN_BOT
 
-# Определяем «ID состояний» (enum-like) для ConversationHandler
-MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES = range(4)
 
 # Настройка логирования
 logging.basicConfig(
@@ -36,10 +36,10 @@ def main():
 
     # ConversationHandler описывает сценарий общения бота с пользователем.
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start_menu)],  # Точка входа (команда /start)
+        entry_points=[CommandHandler("start", start_menu)],
         states={
             MENU: [
-                CallbackQueryHandler(menu_callback, pattern="^(about|ask_question|check_product|healthy_recipes|back_to_menu)$")
+                CallbackQueryHandler(menu_callback, pattern="^(about|ask_question|check_product|healthy_recipes|back_to_menu|...)$")
             ],
             GPT_QUESTION: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, gpt_question_answer)

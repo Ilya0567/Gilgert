@@ -3,7 +3,7 @@
 import logging
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
-from assistant import MENU, RECIPES
+from states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 from config import DISHES
 import lunch
 import drinks  # <-- новый модуль, где DrinksGenerator

@@ -4,7 +4,8 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 # Состояния
-from assistant import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
+from states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
+
 
 logger = logging.getLogger(__name__)
 

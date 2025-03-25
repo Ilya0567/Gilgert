@@ -3,7 +3,7 @@ import logging
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 
-from assistant import MENU
+from states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 import gpt_35  # ваш файл с ChatGPTClient
 from config import KEY
 
