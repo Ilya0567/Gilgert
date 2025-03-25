@@ -21,7 +21,7 @@ def post_receive():
         # Логируем входящий запрос
         app.logger.info('Received webhook: %s', request.data)
         # Выполнить ваш скрипт post-receive
-        subprocess.call(['/root/project/Gilgert/hooks/post-receive'])
+        subprocess.call(['/root/project/Assistant/hooks/post-receive'])
         return '', 204
     else:
         return '', 400
