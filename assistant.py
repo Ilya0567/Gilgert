@@ -1,322 +1,63 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Updater, ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes
-from collections.abc import Mapping
-import pandas as pd
 import logging
-import os
-# Импорт функций
-from data_operation import save_user_data, check_product, id_request
-import gpt_35
-import lunch
-from config import DATA_FILE, TOKEN_BOT, CHAT_ID, DISHES, KEY
+from telegram.ext import (
+    ApplicationBuilder,
+    ConversationHandler,
+    CommandHandler,
+    CallbackQueryHandler,
+    MessageHandler,
+    filters
+)
+
+# Импорт хендлеров из отдельных файлов
+from handlers_menu import start_menu, menu_callback, cancel
+from handlers_gpt import gpt_question_answer
+from handlers_product import product_check_answer
+from handlers_recipes import recipes_submenu_callback
+
+# Импорт конфигурации (TOKEN_BOT)
+from config import TOKEN_BOT
+
+# Определяем «ID состояний» (enum-like) для ConversationHandler
+MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES = range(4)
 
 # Настройка логирования
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
-# Инициализация GPT-клиента
-GPT_CLIENT = gpt_35.ChatGPTClient(api_key=KEY)
 
-# Глобальная переменная для хранения выбранного блюда
-CURRENT_DISH = {}
-
-# Функция, которая будет вызвана при команде /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    keyboard = [
-        [InlineKeyboardButton("О нас", callback_data='about')],
-        [InlineKeyboardButton("Задать вопрос", callback_data='ask_question')],
-        # [InlineKeyboardButton("Задать вопрос", callback_data='ask_question')],
-        [InlineKeyboardButton("Проверить продукт", callback_data="check_product")],
-        [InlineKeyboardButton("Здоровые рецепты", callback_data="healthy_recipes")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    if update.message:
-        await update.message.reply_text(
-            text="👋 Привет! Я ваш помощник, созданный специально для помощи людям с синдромом Жильбера.\n\n"
-            "Я могу помочь Вам с рекомендациями по продуктам питания. Пожалуйста, используйте кнопку ниже, чтобы узнать, можно ли есть определенный продукт. Также Вы можете посмотреть собранные мной вкусные здоровые рецепты.\n\n"
-            "✨ Нажмите на кнопку 'Проверить продукт', чтобы начать.", 
-            reply_markup=reply_markup
-        )
-    elif update.callback_query:
-        await update.callback_query.edit_message_text(
-            text="👋 Привет! Я ваш помощник, созданный специально для помощи людям с синдромом Жильбера.\n\n"
-            "Я могу помочь Вам с рекомендациями по продуктам питания. Пожалуйста, используйте кнопку ниже, чтобы узнать, можно ли есть определенный продукт. Также Вы можете посмотреть собранные мной вкусные здоровые рецепты.\n\n"
-            "✨ Нажмите на кнопку 'Проверить продукт', чтобы начать.", 
-            reply_markup=reply_markup
-        )
-
-# Обработчик нажатий на кнопки
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    await query.answer()
-
-    main_menu_keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔙 Главное меню", callback_data='start')]
-    ])
-
-    if query.data == 'about':
-        about_text = (
-        "🤖 «PYOOTS» — это интеллектуальный помощник, созданный для людей с синдромом Жильбера.\n\n"
-        "🏥 Он призван поддержать пользователей в повседневном уходе за здоровьем и сделать образ жизни комфортнее.\n\n"
-        "💙 Бот уже применяет искусственный интеллект для предоставления полезных рекомендаций, а в будущем функциональность будет расширяться, обеспечивая ещё более точные и персонализированные советы."
-    )
-
-        await query.edit_message_text(text=about_text, reply_markup=main_menu_keyboard)
-    elif query.data == 'ask_question':
-        # Информируем пользователя о вводе вопроса
-        await query.edit_message_text(
-            text="❓ Пожалуйста, задайте ваш вопрос.\n\n"
-            "Как только вы отправите сообщение, я постараюсь ответить вам.",
-            reply_markup=main_menu_keyboard
-        )
-        context.user_data['awaiting_gpt_question'] = True
-    elif query.data == 'check_product':
-        await query.edit_message_text(text="🔍 Пожалуйста, введите название продукта, который Вас интересует.", reply_markup=main_menu_keyboard)
-        context.user_data['check_product'] = True
-    elif query.data == 'start':
-        await start(update, context)
-
-    elif query.data == "healthy_recipes":
-        # Показываем основные категории здоровых рецептов
-        keyboard_recipes = [
-            [InlineKeyboardButton("Завтраки", callback_data="breakfast")],
-            [InlineKeyboardButton("Обеды", callback_data="lunch")],
-            [InlineKeyboardButton("Ужины", callback_data="dinner")],
-            [InlineKeyboardButton("Напитки", callback_data="drinks")],
-            [InlineKeyboardButton("Назад", callback_data="start")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard_recipes)
-        await query.edit_message_text(
-            text="Выберите категорию здоровых рецептов:",
-            reply_markup=reply_markup
-        )
-   
-
-    if query.data == "lunch":
-        # Инициализация LunchGenerator, если его нет в context.user_data
-        if "lunch_generator" not in context.user_data:
-            try:
-                lunch_generator = lunch.LunchGenerator(data_source=DISHES)
-                context.user_data["lunch_generator"] = lunch_generator  # Сохраняем объект
-                logger.info("LunchGenerator успешно инициализирован.")
-            except Exception as e:
-                logger.error(f"Ошибка при загрузке LunchGenerator: {str(e)}")
-                await query.edit_message_text(
-                    text=f"Ошибка при загрузке обедов: {str(e)}",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="healthy_recipes")]])
-                )
-                return
-
-        # Показываем категории обедов
-        keyboard_categories = [
-            [InlineKeyboardButton("Первые", callback_data="category_Первое блюдо")],
-            [InlineKeyboardButton("Основные", callback_data="category_Основное блюдо")],
-            [InlineKeyboardButton("Гарниры", callback_data="category_Гарниры")],
-            [InlineKeyboardButton("Салаты", callback_data="category_Салаты")],
-            [InlineKeyboardButton("Назад", callback_data="healthy_recipes")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard_categories)
-        await query.edit_message_text(
-            text="Выберите категорию блюд обеда:",
-            reply_markup=reply_markup
-        )
-
-    elif query.data.startswith("category_"):
-        category = query.data.split("_")[1]  # Извлекаем категорию из callback_data
-        logger.info(f"Пользователь выбрал категорию: {category}")
-
-        # Сохраняем текущую категорию
-        context.user_data["current_category"] = category
-
-        # Получаем объект LunchGenerator
-        lunch_generator = context.user_data.get("lunch_generator")
-
-        if not lunch_generator:
-            logger.error("LunchGenerator не инициализирован.")
-            await query.edit_message_text(
-                text="Ошибка: данные обедов недоступны. Попробуйте снова.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="lunch")]])
-            )
-            return
-
-        # Получаем список блюд
-        dishes = lunch_generator.get_dishes_by_category(category)
-        logger.info(f"Найденные блюда для категории '{category}': {dishes}")
-
-        if not dishes:
-            await query.edit_message_text(
-                text=f"В категории '{category}' нет доступных блюд.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="lunch")]])
-            )
-            return
-
-        # Формируем кнопки для блюд
-        keyboard_dishes = [
-            [InlineKeyboardButton(dish, callback_data=f"dish_{i}")] for i, dish in enumerate(dishes)
-        ]
-        context.user_data["dish_mapping"] = {f"dish_{i}": dish for i, dish in enumerate(dishes)}
-        keyboard_dishes.append([InlineKeyboardButton("Назад", callback_data="lunch")])
-
-        reply_markup = InlineKeyboardMarkup(keyboard_dishes)
-        await query.edit_message_text(
-            text=f"Выберите блюдо из категории '{category}':",
-            reply_markup=reply_markup
-        )
-
-    elif query.data.startswith("dish_"):
-        # Получаем выбранное блюдо
-        dish_key = query.data
-        dish_name = context.user_data["dish_mapping"].get(dish_key)
-
-        if not dish_name:
-            logger.error(f"Не удалось найти блюдо для ключа {dish_key}.")
-            await query.edit_message_text(
-                text="Ошибка: блюдо не найдено. Попробуйте снова.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]])
-            )
-            return
-
-        # Сохраняем выбранное блюдо
-        context.user_data["selected_dish"] = dish_name
-
-        # Показываем действия для блюда
-        keyboard_dish_actions = [
-            [InlineKeyboardButton("Приготовление", callback_data="preparation")],
-            [InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard_dish_actions)
-
-        await query.edit_message_text(
-            text=f"Вы выбрали: {dish_name}.",
-            reply_markup=reply_markup
-        )
-
-    elif query.data == "preparation":
-        # Отображение состава и способа приготовления
-        dish_name = context.user_data.get("selected_dish")
-        lunch_generator = context.user_data.get("lunch_generator")
-
-        if not dish_name or not lunch_generator:
-            await query.edit_message_text(
-                text="Ошибка: данные о выбранном блюде недоступны.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]])
-            )
-            return
-
-        # Получение деталей блюда
-        details = lunch_generator.get_dish_details(dish_name)
-        await query.edit_message_text(
-            text=details,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]])
-        )
-
-        
-    # elif query.data == "start":
-    #     await update.callback_query.edit_message_text(
-    #         text="👋 Привет! Я ваш помощник, созданный специально для помощи людям с синдромом Жильбера.\n\n"
-    #         "Я могу помочь Вам с рекомендациями по продуктам питания. Пожалуйста, используйте кнопку ниже, чтобы узнать, можно ли есть определенный продукт. Также Вы можете посмотреть собранные мной вкусные здоровые рецепты.\n\n"
-    #         "✨ Нажмите на кнопку 'Проверить продукт', чтобы начать.", 
-    #         reply_markup=reply_markup)
-    
-
-    
-      
-
-
-
-# Функция для обработки текстовых сообщений
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    main_menu_keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔙 Главное меню", callback_data='start')]
-    ])
-
-    # если пользователь задаёт вопрос
-    if context.user_data.get('awaiting_question'): 
-        # Если ожидается вопрос от пользователя
-        timestamp = update.message.date.timestamp()
-        question = update.message.text
-        user_id = update.message.from_user.id
-        user_name = update.message.from_user.username or update.message.from_user.full_name
-        context.user_data['awaiting_question'] = False
-        
-        # Сохранение данных с новым вопросом
-        question_id = save_user_data(timestamp, user_id, question, None)
-        df = pd.read_csv(DATA_FILE, index_col=False)
-        
-        # отправляем уведомление
-        logger.info("Уведомление отправляется в чат")
-        await update.message.reply_text(
-        "✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨\n"
-        "📩 *Ваш вопрос* 📩\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"❓ {question} ❓\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "🙏 Спасибо за обращение! Мы ответим вам в ближайшее время.\n"
-        "✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨",
-        parse_mode='Markdown', reply_markup=main_menu_keyboard
-    )
-        
-        # перенаправление вопроса экспертам
-        await context.bot.send_message(chat_id=CHAT_ID, 
-                                       text=f'Сообщение №{question_id} от пользователя {user_name}:\n{question}')
-        
-    # обработчик вопросов языковой моделью
-    elif context.user_data.get('awaiting_gpt_question'):
-        # Получаем текст вопроса пользователя
-        user_question = update.message.text
-        context.user_data['awaiting_gpt_question'] = False  # Сбрасываем флаг ожидания вопроса
-        
-        try:
-            # Вызываем модель ChatGPT для генерации ответа
-            gpt_response = GPT_CLIENT.generate_response(user_message=user_question)
-            await update.message.reply_text(
-                text=f"{gpt_response}",
-                reply_markup=main_menu_keyboard
-            )
-        except Exception as e:
-            # Обрабатываем возможные ошибки
-            await update.message.reply_text(
-                text=f"⚠️ Произошла ошибка при обработке вашего вопроса:\n{str(e)}",
-                reply_markup=main_menu_keyboard
-            )
-    # если пользователь проверяет продукт
-    elif context.user_data.get('check_product'): 
-        timestamp = update.message.date.timestamp()
-        product = update.message.text
-        user_id = update.message.from_user.id
-        user_name = update.message.from_user.username or update.message.from_user.full_name
-        context.user_data['check_product'] = True
-        # ищем ответ 
-        answer = check_product(product)
-        # отвечаем пользователю
-        await update.message.reply_text(answer, reply_markup=main_menu_keyboard)
-        # если требуется, перенаправляем вопрос специалистам
-        if "ответ" in answer: 
-            id_product_question = id_request()
-            await context.bot.send_message(chat_id=CHAT_ID, 
-                                       text=f'Вопрос по продукту №{id_product_question} от пользователя {user_name}:\n "{product}"')
-    else:
-        # Проверка типа чата, чтобы бот отвечал только в личных сообщениях
-        if update.message.chat.type == 'private':
-            await update.message.reply_text("👉 Пожалуйста, используйте кнопки для взаимодействия со мной. 😊")
-
-
-# Главная функция для запуска бота
 def main():
-    # Создаем приложение
+    """
+    Главная точка входа: создаём приложение, регистрируем ConversationHandler и запускаем бота.
+    """
     application = ApplicationBuilder().token(TOKEN_BOT).build()
 
-    # Регистрируем обработчик для команды /start
-    application.add_handler(CommandHandler("start", start))
+    # ConversationHandler описывает сценарий общения бота с пользователем.
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("start", start_menu)],  # Точка входа (команда /start)
+        states={
+            MENU: [
+                CallbackQueryHandler(menu_callback, pattern="^(about|ask_question|check_product|healthy_recipes|back_to_menu)$")
+            ],
+            GPT_QUESTION: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, gpt_question_answer)
+            ],
+            CHECK_PRODUCT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, product_check_answer)
+            ],
+            RECIPES: [
+                CallbackQueryHandler(recipes_submenu_callback)
+            ],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+        allow_reentry=True
+    )
 
-    # Регистрируем обработчик для нажатий на кнопки
-    application.add_handler(CallbackQueryHandler(button))
-
-    # Регистрируем обработчик для текстовых сообщений
-    application.add_handler(MessageHandler(None, handle_message))
-
-    # Запускаем бота
+    application.add_handler(conv_handler)
     application.run_polling()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
