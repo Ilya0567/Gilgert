@@ -13,8 +13,8 @@ from states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 # Импорт хендлеров из отдельных файлов
 from handlers_menu import start_menu, menu_callback, cancel
 from handlers_gpt import gpt_user_message
-from handlers_product import product_check_answer
-from handlers_recipes import recipes_submenu_callback
+from handlers_product import product_user_message
+from handlers_recipes import recipes_callback  
 
 # Импорт конфигурации (TOKEN_BOT)
 from config import TOKEN_BOT
@@ -45,10 +45,10 @@ def main():
                 MessageHandler(filters.TEXT & ~filters.COMMAND, gpt_user_message)
             ],
             CHECK_PRODUCT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, product_check_answer)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, product_user_message)
             ],
             RECIPES: [
-                CallbackQueryHandler(recipes_submenu_callback)
+                CallbackQueryHandler(recipes_callback)
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
