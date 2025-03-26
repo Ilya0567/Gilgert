@@ -295,6 +295,16 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("dish_"):
         dish_key = data
+        lunch_generator = context.user_data.get("lunch_generator")
+        if not lunch_generator:
+            await query.edit_message_text(
+                text="Ошибка: обеды недоступны.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Назад", callback_data="lunch")]
+                ])
+            )
+            return RECIPES
+
         dish_name = context.user_data["dish_mapping"].get(dish_key)
         if not dish_name:
             await query.edit_message_text(
@@ -305,34 +315,13 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return RECIPES
 
-        context.user_data["selected_dish"] = dish_name
-
-        keyboard_dish_actions = [
-            [InlineKeyboardButton("Приготовление", callback_data="preparation")],
-            [InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]
-        ]
-        await query.edit_message_text(
-            text=f"Вы выбрали: {dish_name}.",
-            reply_markup=InlineKeyboardMarkup(keyboard_dish_actions)
-        )
-        return RECIPES
-
-    elif data == "preparation":
-        dish_name = context.user_data.get("selected_dish")
-        lunch_generator = context.user_data.get("lunch_generator")
-        if not dish_name or not lunch_generator:
-            await query.edit_message_text(
-                text="Ошибка: данные о выбранном блюде недоступны.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]
-                ])
-            )
-            return RECIPES
-
+        # СРАЗУ показываем детали блюда, без промежуточного экрана
         details = lunch_generator.get_dish_details(dish_name)
+
         await query.edit_message_text(
             text=details,
             reply_markup=InlineKeyboardMarkup([
+                # Кнопка "Назад" возвращает к списку блюд категории
                 [InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]
             ])
         )
