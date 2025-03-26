@@ -24,7 +24,7 @@ async def product_user_message(update: Update, context: ContextTypes.DEFAULT_TYP
     await update.message.reply_text(
         answer,
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔙 В меню", callback_data='start')]
+            [InlineKeyboardButton("🔙 В меню", callback_data='back_to_menu')]
         ])
     )
 

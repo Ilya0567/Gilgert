@@ -43,7 +43,7 @@ def main():
             ],
             GPT_QUESTION: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, gpt_user_message),
-                # И ловим колбэки "back_to_menu"
+                # И ловим колбэки "back_to_menu" 
                 CallbackQueryHandler(menu_callback, pattern="^back_to_menu$")
             ],
             CHECK_PRODUCT: [
