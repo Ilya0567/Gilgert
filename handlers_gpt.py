@@ -28,7 +28,7 @@ async def gpt_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             text=gpt_response,
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 В меню", callback_data='start')]
+                [InlineKeyboardButton("🔙 В меню", callback_data='back_to_menu')]
             ])
         )
     except Exception as e:
@@ -36,7 +36,7 @@ async def gpt_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             text=f"⚠️ Произошла ошибка при обработке вашего вопроса:\n{str(e)}",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 В меню", callback_data='start')]
+                [InlineKeyboardButton("🔙 В меню", callback_data='back_to_menu')]
             ])
         )
 
