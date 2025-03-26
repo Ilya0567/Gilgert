@@ -88,6 +88,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text="Выберите прием пищи:",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("Завтраки", callback_data="breakfast")],
+                [InlineKeyboardButton("Полдники", callback_data="poldnik")],
                 [InlineKeyboardButton("Обеды", callback_data="lunch")],
                 [InlineKeyboardButton("Ужины", callback_data="dinner")],
                 [InlineKeyboardButton("Назад", callback_data='back_to_menu')]

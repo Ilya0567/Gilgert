@@ -8,7 +8,8 @@ from states import MENU, RECIPES
 from config import DISHES
 import lunch
 import drinks
-import breakfast  # Ваш модуль с классом BreakfastGenerator
+import breakfast    # ваш класс BreakfastGenerator
+import poldnik      # ваш класс PoldnikGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -17,18 +18,20 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     data = query.data
 
-    # 1. Если пользователь нажал "start" или "back_to_menu"
+    # Если пользователь нажал "start" или "back_to_menu"
     if data in ('start', 'back_to_menu'):
         from handlers_menu import start_menu
         return await start_menu(update, context)
 
-    # 2. "Завтраки"
+    # ---------- Завтраки ----------
     elif data == "breakfast":
-        # Инициализируем BreakfastGenerator при необходимости
+        # При первом обращении - инициализируем BreakfastGenerator
         if "breakfast_generator" not in context.user_data:
             try:
+                # Предположим, у вас CSV "Data/breakfast.csv"
+                # и класс BreakfastGenerator
                 context.user_data["breakfast_generator"] = breakfast.BreakfastGenerator("Data/breakfast.csv")
-                logger.info("BreakfastGenerator инициализирован.")
+                logger.info("BreakfastGenerator инициализирован для завтраков.")
             except Exception as e:
                 logger.error(f"Ошибка при загрузке завтраков: {e}")
                 await query.edit_message_text(
@@ -40,7 +43,8 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return RECIPES
 
         bf_gen = context.user_data["breakfast_generator"]
-        categories = bf_gen.get_unique_categories("завтрак")  # «Блюдо из»
+        # Получаем список категорий (например, 'каша', 'бутерброд', и т.д.)
+        categories = bf_gen.get_unique_categories()
 
         if not categories:
             await query.edit_message_text(
@@ -51,27 +55,87 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return RECIPES
 
-        # Формируем кнопки подкатегорий завтрака
+        # Формируем кнопки для категорий (столбец 'Блюдо из')
         keyboard_cats = []
         for cat in categories:
-            callback_data = f"break_cat_{cat}"
+            callback_data = f"bcat_{cat}"
             keyboard_cats.append([InlineKeyboardButton(cat, callback_data=callback_data)])
 
+        # Кнопка назад
         keyboard_cats.append([InlineKeyboardButton("Назад", callback_data="start")])
+
         await query.edit_message_text(
-            text="Выберите категорию для завтрака:",
+            text="Выберите категорию блюд (завтрак):",
             reply_markup=InlineKeyboardMarkup(keyboard_cats)
         )
-        context.user_data["current_meal_type"] = "завтрак"
         return RECIPES
 
-    # 3. "Полдники"
+    elif data.startswith("bcat_"):
+        # Пользователь выбрал конкретную категорию завтраков
+        selected_cat = data.split("bcat_")[1]
+        bf_gen = context.user_data["breakfast_generator"]
+
+        items = bf_gen.get_items_by_category(selected_cat)
+        if not items:
+            await query.edit_message_text(
+                text=f"В категории «{selected_cat}» нет блюд (завтрак).",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Назад", callback_data="breakfast")]
+                ])
+            )
+            return RECIPES
+
+        # Формируем кнопки для блюд
+        keyboard_items = []
+        for i, name in enumerate(items):
+            callback_data = f"bitem_{i}"
+            keyboard_items.append([InlineKeyboardButton(name, callback_data=callback_data)])
+
+        context.user_data["bf_cat"] = selected_cat
+        context.user_data["bf_map"] = {f"bitem_{i}": name for i, name in enumerate(items)}
+
+        keyboard_items.append([InlineKeyboardButton("Назад", callback_data="breakfast")])
+        await query.edit_message_text(
+            text=f"Выберите блюдо из категории «{selected_cat}» (завтрак):",
+            reply_markup=InlineKeyboardMarkup(keyboard_items)
+        )
+        return RECIPES
+
+    elif data.startswith("bitem_"):
+        # Детали блюда (завтрак)
+        bf_gen = context.user_data["breakfast_generator"]
+        item_map = context.user_data.get("bf_map", {})
+        item_key = data
+        item_name = item_map.get(item_key)
+
+        if not item_name:
+            await query.edit_message_text(
+                text="Блюдо не найдено (завтрак).",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Назад", callback_data="breakfast")]
+                ])
+            )
+            return RECIPES
+
+        details = bf_gen.get_item_details(item_name)
+        selected_cat = context.user_data.get("bf_cat", "...")
+
+        await query.edit_message_text(
+            text=details,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Назад", callback_data=f"bcat_{selected_cat}")]
+            ])
+        )
+        return RECIPES
+
+    # ---------- Полдники ----------
     elif data == "poldnik":
-        # Используем тот же файл breakfast.csv, но фильтруем по «полдник»
-        if "breakfast_generator" not in context.user_data:
+        # При первом обращении - инициализируем PoldnikGenerator
+        if "poldnik_generator" not in context.user_data:
             try:
-                context.user_data["breakfast_generator"] = breakfast.BreakfastGenerator("Data/breakfast.csv")
-                logger.info("BreakfastGenerator инициализирован (полдники).")
+                # Предположим, у вас CSV "Data/poldnik.csv"
+                context.user_data["poldnik_generator"] = poldnik.PoldnikGenerator("Data/breakfast.csv")
+                logger.info("PoldnikGenerator инициализирован.")
             except Exception as e:
                 logger.error(f"Ошибка при загрузке полдников: {e}")
                 await query.edit_message_text(
@@ -82,8 +146,8 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 return RECIPES
 
-        bf_gen = context.user_data["breakfast_generator"]
-        categories = bf_gen.get_unique_categories("полдник")
+        pd_gen = context.user_data["poldnik_generator"]
+        categories = pd_gen.get_unique_categories()
 
         if not categories:
             await query.edit_message_text(
@@ -96,80 +160,21 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard_cats = []
         for cat in categories:
-            callback_data = f"pold_cat_{cat}"
+            callback_data = f"pcat_{cat}"
             keyboard_cats.append([InlineKeyboardButton(cat, callback_data=callback_data)])
 
         keyboard_cats.append([InlineKeyboardButton("Назад", callback_data="start")])
         await query.edit_message_text(
-            text="Выберите категорию для полдника:",
+            text="Выберите категорию (полдник):",
             reply_markup=InlineKeyboardMarkup(keyboard_cats)
         )
-        context.user_data["current_meal_type"] = "полдник"
         return RECIPES
 
-    # 4. Когда пользователь выбрал категорию завтрака
-    elif data.startswith("break_cat_"):
-        selected_cat = data.split("break_cat_")[1]
-        bf_gen = context.user_data["breakfast_generator"]
-        meal_type = "завтрак"
+    elif data.startswith("pcat_"):
+        selected_cat = data.split("pcat_")[1]
+        pd_gen = context.user_data["poldnik_generator"]
 
-        items = bf_gen.get_items_by_category(meal_type, selected_cat)
-        if not items:
-            await query.edit_message_text(
-                text=f"В категории «{selected_cat}» (завтрак) нет блюд.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Назад", callback_data="breakfast")]
-                ])
-            )
-            return RECIPES
-
-        # Формируем кнопки блюд
-        keyboard_items = []
-        for i, name in enumerate(items):
-            callback_data = f"break_item_{i}"
-            keyboard_items.append([InlineKeyboardButton(name, callback_data=callback_data)])
-
-        context.user_data["breakfast_map"] = {f"break_item_{i}": n for i, n in enumerate(items)}
-        context.user_data["breakfast_current_cat"] = selected_cat
-
-        keyboard_items.append([InlineKeyboardButton("Назад", callback_data="breakfast")])
-        await query.edit_message_text(
-            text=f"Выберите блюдо из категории «{selected_cat}» (завтрак):",
-            reply_markup=InlineKeyboardMarkup(keyboard_items)
-        )
-        return RECIPES
-
-    elif data.startswith("break_item_"):
-        bf_gen = context.user_data["breakfast_generator"]
-        item_map = context.user_data.get("breakfast_map", {})
-        item_key = data
-        item_name = item_map.get(item_key)
-        if not item_name:
-            await query.edit_message_text(
-                text="Блюдо не найдено (завтрак).",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Назад", callback_data="breakfast")]
-                ])
-            )
-            return RECIPES
-
-        details = bf_gen.get_item_details(item_name)
-        selected_cat = context.user_data.get("breakfast_current_cat", "...")
-        await query.edit_message_text(
-            text=details,
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("Назад", callback_data=f"break_cat_{selected_cat}")]
-            ])
-        )
-        return RECIPES
-
-    # 5. Когда пользователь выбрал категорию полдника
-    elif data.startswith("pold_cat_"):
-        selected_cat = data.split("pold_cat_")[1]
-        bf_gen = context.user_data["breakfast_generator"]
-        meal_type = "полдник"
-
-        items = bf_gen.get_items_by_category(meal_type, selected_cat)
+        items = pd_gen.get_items_by_category(selected_cat)
         if not items:
             await query.edit_message_text(
                 text=f"В категории «{selected_cat}» (полдник) нет блюд.",
@@ -181,11 +186,11 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard_items = []
         for i, name in enumerate(items):
-            callback_data = f"pold_item_{i}"
+            callback_data = f"pitem_{i}"
             keyboard_items.append([InlineKeyboardButton(name, callback_data=callback_data)])
 
-        context.user_data["poldnik_map"] = {f"pold_item_{i}": n for i, n in enumerate(items)}
-        context.user_data["poldnik_current_cat"] = selected_cat
+        context.user_data["pd_cat"] = selected_cat
+        context.user_data["pd_map"] = {f"pitem_{i}": name for i, name in enumerate(items)}
 
         keyboard_items.append([InlineKeyboardButton("Назад", callback_data="poldnik")])
         await query.edit_message_text(
@@ -194,11 +199,13 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return RECIPES
 
-    elif data.startswith("pold_item_"):
-        bf_gen = context.user_data["breakfast_generator"]
-        item_map = context.user_data.get("poldnik_map", {})
+    elif data.startswith("pitem_"):
+        # Детали блюда (полдник)
+        pd_gen = context.user_data["poldnik_generator"]
+        item_map = context.user_data.get("pd_map", {})
         item_key = data
         item_name = item_map.get(item_key)
+
         if not item_name:
             await query.edit_message_text(
                 text="Блюдо не найдено (полдник).",
@@ -208,27 +215,131 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return RECIPES
 
-        details = bf_gen.get_item_details(item_name)
-        selected_cat = context.user_data.get("poldnik_current_cat", "...")
+        details = pd_gen.get_item_details(item_name)
+        selected_cat = context.user_data.get("pd_cat", "...")
+
         await query.edit_message_text(
             text=details,
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("Назад", callback_data=f"pold_cat_{selected_cat}")]
+                [InlineKeyboardButton("Назад", callback_data=f"pcat_{selected_cat}")]
             ])
         )
         return RECIPES
 
-    # 6. Логика для "lunch", "dinner" и "drinks" уже есть — оставим
-    #    (Судя по вашему коду, она ниже)
-
-    # --- Уже существующий блок "lunch" / "drinks" / "dinner" ---
+    # ---------- Обеды (lunch) ----------
     elif data == "lunch":
-        # Если нужно
-        pass
+        if "lunch_generator" not in context.user_data:
+            try:
+                lunch_generator = lunch.LunchGenerator(data_source=DISHES)
+                context.user_data["lunch_generator"] = lunch_generator
+                logger.info("LunchGenerator инициализирован.")
+            except Exception as e:
+                logger.error(f"Ошибка при загрузке LunchGenerator: {e}")
+                await query.edit_message_text(
+                    text=f"Ошибка при загрузке обедов: {e}",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("Назад", callback_data="start")]
+                    ])
+                )
+                return RECIPES
 
-    # ----- или, если у вас уже есть блок drinks -----
+        keyboard_categories = [
+            [InlineKeyboardButton("Первые", callback_data="category_Первое блюдо")],
+            [InlineKeyboardButton("Основные", callback_data="category_Основное блюдо")],
+            [InlineKeyboardButton("Гарниры", callback_data="category_Гарниры")],
+            [InlineKeyboardButton("Салаты", callback_data="category_Салаты")],
+            [InlineKeyboardButton("Напитки", callback_data="drinks")],
+            [InlineKeyboardButton("Назад", callback_data="start")]
+        ]
+        await query.edit_message_text(
+            text="Выберите категорию блюд обеда:",
+            reply_markup=InlineKeyboardMarkup(keyboard_categories)
+        )
+        return RECIPES
+
+    elif data.startswith("category_"):
+        category = data.split("_", 1)[1]
+        lunch_generator = context.user_data.get("lunch_generator")
+        if not lunch_generator:
+            await query.edit_message_text(
+                text="Ошибка: генератор обедов не инициализирован.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Назад", callback_data="start")]
+                ])
+            )
+            return RECIPES
+
+        dishes = lunch_generator.get_dishes_by_category(category)
+        if not dishes:
+            await query.edit_message_text(
+                text=f"В категории '{category}' нет доступных блюд.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Назад", callback_data="lunch")]
+                ])
+            )
+            return RECIPES
+
+        keyboard_dishes = []
+        for i, dish in enumerate(dishes):
+            keyboard_dishes.append([InlineKeyboardButton(dish, callback_data=f"dish_{i}")])
+        keyboard_dishes.append([InlineKeyboardButton("Назад", callback_data="lunch")])
+
+        context.user_data["dish_mapping"] = {f"dish_{i}": dish for i, dish in enumerate(dishes)}
+        context.user_data["current_category"] = category
+
+        await query.edit_message_text(
+            text=f"Выберите блюдо из категории '{category}':",
+            reply_markup=InlineKeyboardMarkup(keyboard_dishes)
+        )
+        return RECIPES
+
+    elif data.startswith("dish_"):
+        dish_key = data
+        dish_name = context.user_data["dish_mapping"].get(dish_key)
+        if not dish_name:
+            await query.edit_message_text(
+                text="Ошибка: блюдо не найдено.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]
+                ])
+            )
+            return RECIPES
+
+        context.user_data["selected_dish"] = dish_name
+
+        keyboard_dish_actions = [
+            [InlineKeyboardButton("Приготовление", callback_data="preparation")],
+            [InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]
+        ]
+        await query.edit_message_text(
+            text=f"Вы выбрали: {dish_name}.",
+            reply_markup=InlineKeyboardMarkup(keyboard_dish_actions)
+        )
+        return RECIPES
+
+    elif data == "preparation":
+        dish_name = context.user_data.get("selected_dish")
+        lunch_generator = context.user_data.get("lunch_generator")
+        if not dish_name or not lunch_generator:
+            await query.edit_message_text(
+                text="Ошибка: данные о выбранном блюде недоступны.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]
+                ])
+            )
+            return RECIPES
+
+        details = lunch_generator.get_dish_details(dish_name)
+        await query.edit_message_text(
+            text=details,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]
+            ])
+        )
+        return RECIPES
+
+    # ---------- Напитки (drinks) ----------
     elif data == "drinks":
-        # Инициализация DrinksGenerator
         if "drinks_generator" not in context.user_data:
             try:
                 context.user_data["drinks_generator"] = drinks.DrinksGenerator("Data/drinks.csv")
@@ -293,7 +404,6 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["drinks_current_cat"] = selected_cat
 
         keyboard_drinks_list.append([InlineKeyboardButton("Назад", callback_data="drinks")])
-
         await query.edit_message_text(
             text=f"Выберите напиток из категории «{selected_cat}»:",
             reply_markup=InlineKeyboardMarkup(keyboard_drinks_list)
@@ -328,5 +438,5 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return RECIPES
 
-    # Ничего не подошло:
+    # Если никакая ветка не сработала
     return RECIPES
