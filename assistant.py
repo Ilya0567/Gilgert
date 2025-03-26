@@ -42,10 +42,13 @@ def main():
                 CallbackQueryHandler(menu_callback, pattern="^(about|ask_question|check_product|healthy_recipes|back_to_menu|...)$")
             ],
             GPT_QUESTION: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, gpt_user_message)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, gpt_user_message),
+                # И ловим колбэки "back_to_menu"
+                CallbackQueryHandler(menu_callback, pattern="^back_to_menu$")
             ],
             CHECK_PRODUCT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, product_user_message)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, product_user_message),
+                CallbackQueryHandler(menu_callback, pattern="^back_to_menu$")
             ],
             RECIPES: [
                 CallbackQueryHandler(recipes_callback)
