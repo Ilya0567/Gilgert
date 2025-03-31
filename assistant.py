@@ -19,6 +19,7 @@ from handlers_recipes import recipes_callback
 # Импорт конфигурации (TOKEN_BOT)
 from config import TOKEN_BOT
 
+
 from database import init_db, SessionLocal
 
 # Настройка логирования
