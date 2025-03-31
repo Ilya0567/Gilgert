@@ -6,6 +6,8 @@ import logging
 # Get logger for this module
 models_logger = logging.getLogger(__name__)
 
+models_logger.info("Registering ClientProfile model with SQLAlchemy")
+
 class ClientProfile(Base):
     __tablename__ = "client_profiles"
 

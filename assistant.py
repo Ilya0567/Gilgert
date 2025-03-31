@@ -13,18 +13,7 @@ from telegram.ext import (
 
 from states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 
-# Импорт хендлеров из отдельных файлов
-from handlers_menu import start_menu, menu_callback, cancel
-from handlers_gpt import gpt_user_message
-from handlers_product import product_user_message
-from handlers_recipes import recipes_callback  
-
-# Импорт конфигурации (TOKEN_BOT)
-from config import TOKEN_BOT
-
-from database import init_db, SessionLocal, get_or_create_user, Base
-
-# Настройка логирования
+# Set up logging first
 LOG_FILENAME = 'bot.log'
 LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
@@ -53,6 +42,20 @@ logger.addHandler(file_handler)
 
 # Get a module-specific logger
 bot_logger = logging.getLogger(__name__)
+
+# Import database and models
+from database import SessionLocal, get_or_create_user
+# Import models before initializing the database
+from models import ClientProfile  
+
+# Импорт хендлеров из отдельных файлов
+from handlers_menu import start_menu, menu_callback, cancel
+from handlers_gpt import gpt_user_message
+from handlers_product import product_user_message
+from handlers_recipes import recipes_callback  
+
+# Импорт конфигурации (TOKEN_BOT)
+from config import TOKEN_BOT
 
 # Decorator for tracking user interactions
 def track_user(func):
@@ -97,7 +100,6 @@ def track_user(func):
     return wrapper
 
 # Apply the track_user decorator to all handler functions
-init_db()
 start_menu = track_user(start_menu)
 menu_callback = track_user(menu_callback)
 gpt_user_message = track_user(gpt_user_message)
@@ -110,6 +112,13 @@ def main():
     Главная точка входа: создаём приложение, регистрируем ConversationHandler и запускаем бота.
     """
     bot_logger.info("Starting bot application...")
+    
+    # Import and initialize database here
+    from database import init_db
+    bot_logger.info("Initializing database...")
+    init_db()
+    bot_logger.info("Database initialized successfully")
+    
     application = ApplicationBuilder().token(TOKEN_BOT).build()
 
     # ConversationHandler описывает сценарий общения бота с пользователем.
@@ -138,11 +147,6 @@ def main():
     )
 
     application.add_handler(conv_handler)
-
-    # Initialize the database
-    bot_logger.info("Initializing database...")
-    init_db()
-    bot_logger.info("Database initialized successfully")
 
     bot_logger.info("Bot started and running...")
     application.run_polling()
