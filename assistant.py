@@ -19,6 +19,7 @@ from handlers_recipes import recipes_callback
 # Импорт конфигурации (TOKEN_BOT)
 from config import TOKEN_BOT
 
+from .database import init_db, SessionLocal
 
 # Настройка логирования
 logging.basicConfig(
@@ -59,6 +60,15 @@ def main():
     )
 
     application.add_handler(conv_handler)
+
+    # Initialize the database
+    init_db()
+
+    # Example of using a session
+    # with SessionLocal() as session:
+    #     # Perform database operations here
+    #     pass
+
     application.run_polling()
 
 
