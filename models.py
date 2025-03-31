@@ -1,6 +1,10 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.sql import func
 from database import Base
+import logging
+
+# Get logger for this module
+models_logger = logging.getLogger(__name__)
 
 class ClientProfile(Base):
     __tablename__ = "client_profiles"
@@ -15,3 +19,7 @@ class ClientProfile(Base):
     last_interaction = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     interaction_count = Column(Integer, default=1)
     # Add other fields as necessary 
+    
+    def __repr__(self):
+        """String representation of the ClientProfile model"""
+        return f"ClientProfile(id={self.id}, telegram_id={self.telegram_id}, username={self.username}, interaction_count={self.interaction_count})" 

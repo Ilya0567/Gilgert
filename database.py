@@ -1,22 +1,32 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import logging
+
+# Get logger for this module
+db_logger = logging.getLogger(__name__)
 
 DATABASE_URL = "sqlite:///./test.db"  # Using SQLite for simplicity
 
+db_logger.info(f"Setting up database connection to: {DATABASE_URL}")
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def init_db():
+    """Initialize the database by creating all tables."""
+    db_logger.info("Creating database tables...")
     Base.metadata.create_all(bind=engine)
+    db_logger.info("Database tables created successfully")
 
 def get_db():
     """Function to get a database session."""
+    db_logger.debug("Creating new database session")
     db = SessionLocal()
     try:
         yield db
     finally:
+        db_logger.debug("Closing database session")
         db.close()
 
 def get_or_create_user(db, telegram_id, username=None, first_name=None, last_name=None):
@@ -35,23 +45,31 @@ def get_or_create_user(db, telegram_id, username=None, first_name=None, last_nam
     """
     from models import ClientProfile
     
+    db_logger.info(f"Looking for user with telegram_id: {telegram_id}")
     user = db.query(ClientProfile).filter(ClientProfile.telegram_id == str(telegram_id)).first()
     
     if user:
+        db_logger.info(f"Found existing user: {telegram_id}, username: {user.username}")
         # Update user information if it has changed
         if username and user.username != username:
+            db_logger.info(f"Updating username from '{user.username}' to '{username}'")
             user.username = username
         if first_name and user.first_name != first_name:
+            db_logger.info(f"Updating first_name from '{user.first_name}' to '{first_name}'")
             user.first_name = first_name
         if last_name and user.last_name != last_name:
+            db_logger.info(f"Updating last_name from '{user.last_name}' to '{last_name}'")
             user.last_name = last_name
             
         # Increment interaction count
         user.interaction_count += 1
+        db_logger.info(f"Incremented interaction count to: {user.interaction_count}")
         db.commit()
+        db_logger.debug("Database changes committed")
         return user
     
     # Create new user if not found
+    db_logger.info(f"User {telegram_id} not found. Creating new user profile.")
     new_user = ClientProfile(
         telegram_id=str(telegram_id),
         username=username,
@@ -60,6 +78,8 @@ def get_or_create_user(db, telegram_id, username=None, first_name=None, last_nam
     )
     
     db.add(new_user)
+    db_logger.debug(f"Added new user to session: {telegram_id}")
     db.commit()
+    db_logger.info(f"New user committed to database: {telegram_id}")
     db.refresh(new_user)
     return new_user 

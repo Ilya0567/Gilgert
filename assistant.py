@@ -1,4 +1,6 @@
 import logging
+import os
+from logging.handlers import RotatingFileHandler
 from functools import wraps
 from telegram.ext import (
     ApplicationBuilder,
@@ -23,11 +25,34 @@ from config import TOKEN_BOT
 from database import init_db, SessionLocal, get_or_create_user
 
 # Настройка логирования
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+LOG_FILENAME = 'bot.log'
+LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+# Ensure the log directory exists
+os.makedirs('logs', exist_ok=True)
+log_file_path = os.path.join('logs', LOG_FILENAME)
+
+# Create handlers for both console and file output
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+
+file_handler = RotatingFileHandler(
+    log_file_path, 
+    maxBytes=10*1024*1024,  # 10MB max file size
+    backupCount=5  # Keep 5 backup files
 )
-logger = logging.getLogger(__name__)
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+
+# Configure the root logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
+# Get a module-specific logger
+bot_logger = logging.getLogger(__name__)
 
 # Decorator for tracking user interactions
 def track_user(func):
@@ -35,10 +60,15 @@ def track_user(func):
     async def wrapper(update, context, *args, **kwargs):
         # Extract user information
         user = update.effective_user
+        handler_name = func.__name__
+        
+        bot_logger.info(f"Handler called: {handler_name} by user: {user.id} ({user.username or 'No username'})")
         
         # Create a database session
         db = SessionLocal()
         try:
+            bot_logger.info(f"Checking if user {user.id} exists in database...")
+            
             # Get or create user profile
             user_profile = get_or_create_user(
                 db=db,
@@ -48,16 +78,20 @@ def track_user(func):
                 last_name=user.last_name
             )
             
-            # Log user interaction
-            logger.info(f"User interaction: {user.id} ({user.username}), interaction count: {user_profile.interaction_count}")
+            if user_profile.interaction_count == 1:
+                bot_logger.info(f"NEW USER created: {user.id} ({user.username or 'No username'}) - {user.first_name} {user.last_name or ''}")
+            else:
+                bot_logger.info(f"Existing user found: {user.id} ({user.username or 'No username'}) - interaction count: {user_profile.interaction_count}")
             
             # Call the original handler function
+            bot_logger.debug(f"Calling original handler: {handler_name}")
             return await func(update, context, *args, **kwargs)
         except Exception as e:
-            logger.error(f"Error tracking user: {e}")
+            bot_logger.error(f"Error tracking user: {e}", exc_info=True)
             # Still call the original function even if tracking fails
             return await func(update, context, *args, **kwargs)
         finally:
+            bot_logger.debug(f"Closing database session for user: {user.id}")
             db.close()
             
     return wrapper
@@ -74,9 +108,11 @@ def main():
     """
     Главная точка входа: создаём приложение, регистрируем ConversationHandler и запускаем бота.
     """
+    bot_logger.info("Starting bot application...")
     application = ApplicationBuilder().token(TOKEN_BOT).build()
 
     # ConversationHandler описывает сценарий общения бота с пользователем.
+    bot_logger.info("Configuring conversation handler...")
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start_menu)],
         states={
@@ -103,13 +139,11 @@ def main():
     application.add_handler(conv_handler)
 
     # Initialize the database
+    bot_logger.info("Initializing database...")
     init_db()
+    bot_logger.info("Database initialized successfully")
 
-    # Example of using a session
-    # with SessionLocal() as session:
-    #     # Perform database operations here
-    #     pass
-
+    bot_logger.info("Bot started and running...")
     application.run_polling()
 
 
