@@ -8,7 +8,7 @@ git pull
 
 # Устанавливаем зависимости
 pip install --upgrade pip
-pip install -r requirements.txt
+# pip install -r requirements.txt
 
 # Перезапустить службу бота
 sudo systemctl restart bot_service
