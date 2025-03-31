@@ -3,5 +3,10 @@ Data/Список продуктов.xlsx
 Продукты питания.ipynb
 Список продуктов.xlsx
 ~$*.xlsx
+logs/
+*.db
+*.sqlite
+__pycache__/
+*.log
 
 
