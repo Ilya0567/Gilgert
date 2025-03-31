@@ -1,4 +1,5 @@
 import logging
+from functools import wraps
 from telegram.ext import (
     ApplicationBuilder,
     ConversationHandler,
@@ -19,7 +20,7 @@ from handlers_recipes import recipes_callback
 # Импорт конфигурации (TOKEN_BOT)
 from config import TOKEN_BOT
 
-from database import init_db, SessionLocal
+from database import init_db, SessionLocal, get_or_create_user
 
 # Настройка логирования
 logging.basicConfig(
@@ -28,6 +29,46 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Decorator for tracking user interactions
+def track_user(func):
+    @wraps(func)
+    async def wrapper(update, context, *args, **kwargs):
+        # Extract user information
+        user = update.effective_user
+        
+        # Create a database session
+        db = SessionLocal()
+        try:
+            # Get or create user profile
+            user_profile = get_or_create_user(
+                db=db,
+                telegram_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name
+            )
+            
+            # Log user interaction
+            logger.info(f"User interaction: {user.id} ({user.username}), interaction count: {user_profile.interaction_count}")
+            
+            # Call the original handler function
+            return await func(update, context, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"Error tracking user: {e}")
+            # Still call the original function even if tracking fails
+            return await func(update, context, *args, **kwargs)
+        finally:
+            db.close()
+            
+    return wrapper
+
+# Apply the track_user decorator to all handler functions
+start_menu = track_user(start_menu)
+menu_callback = track_user(menu_callback)
+gpt_user_message = track_user(gpt_user_message)
+product_user_message = track_user(product_user_message)
+recipes_callback = track_user(recipes_callback)
+cancel = track_user(cancel)
 
 def main():
     """
