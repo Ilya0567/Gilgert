@@ -22,7 +22,7 @@ from handlers_recipes import recipes_callback
 # Импорт конфигурации (TOKEN_BOT)
 from config import TOKEN_BOT
 
-from database import init_db, SessionLocal, get_or_create_user
+from database import init_db, SessionLocal, get_or_create_user, Base
 
 # Настройка логирования
 LOG_FILENAME = 'bot.log'
@@ -97,6 +97,7 @@ def track_user(func):
     return wrapper
 
 # Apply the track_user decorator to all handler functions
+init_db()
 start_menu = track_user(start_menu)
 menu_callback = track_user(menu_callback)
 gpt_user_message = track_user(gpt_user_message)
