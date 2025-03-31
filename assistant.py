@@ -20,7 +20,7 @@ from handlers_recipes import recipes_callback
 from config import TOKEN_BOT
 
 
-from .database import init_db, SessionLocal
+from database import init_db, SessionLocal
 
 # Настройка логирования
 logging.basicConfig(
