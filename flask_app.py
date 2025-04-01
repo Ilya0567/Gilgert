@@ -2,20 +2,21 @@ from flask import Flask, request
 import subprocess
 import logging
 import os
+
 app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-log_path = os.path.join(BASE_DIR, "flask_app.log")  # ✅ корректный путь
+log_path = os.path.join(BASE_DIR, "flask_app.log")  # корректный путь
+
 # Настройка логирования
 logging.basicConfig(
-    level=logging.DEBUG, 
+    level=logging.DEBUG,
     format='%(asctime)s - %(message)s',
     handlers=[
         logging.FileHandler(log_path),  # Логи в файл
-        logging.StreamHandler()  # Логи в консоль (по желанию)
+        logging.StreamHandler()         # Логи в консоль (по желанию)
     ]
 )
-
 
 @app.route('/post-receive', methods=['POST'])
 def post_receive():
@@ -23,14 +24,11 @@ def post_receive():
         # Логируем входящий запрос
         app.logger.info('Received webhook: %s', request.data)
         # Выполнить ваш скрипт post-receive
-    	subprocess.check_call(['/root/project/Assistant/hooks/post-receive'])
-        # нужно обработать исключение
         try:
-            subprocess.call(['/root/project/Assistant/hooks/post-receive'])
-        except Exception as e:
-            app.logger.error(f'Error executing post-receive: {e}')
-            return '', 500
->>>>>>> f0d7c76d51d9721fe335a1cce71f2537343ec102
+            subprocess.check_call(['/root/project/Assistant/hooks/post-receive'])
+        except subprocess.CalledProcessError as e:
+            app.logger.error(f'Ошибка при вызове post-receive: {e}')
+            return 'Internal Server Error', 500
         return '', 204
     else:
         return '', 400
