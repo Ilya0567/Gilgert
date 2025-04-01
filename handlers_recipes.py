@@ -11,12 +11,18 @@ import drinks
 import breakfast    # ваш класс BreakfastGenerator
 import poldnik      # ваш класс PoldnikGenerator
 
+# Added imports
+from database import SessionLocal # Assuming SessionLocal is here
+from crud import add_recipe_rating # Assuming function to add rating is here
+from models import ActionType # Import ActionType for tracking
+
 logger = logging.getLogger(__name__)
 
 async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
+    user = query.from_user # Get user info
 
     # Если пользователь нажал "start" или "back_to_menu"
     if data in ('start', 'back_to_menu'):
@@ -103,80 +109,34 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("bitem_"):
         # Детали блюда (завтрак)
-        bf_gen = context.user_data["breakfast_generator"]
+        bf_gen = context.user_data.get("breakfast_generator")
         item_map = context.user_data.get("bf_map", {})
         item_key = data
         item_name = item_map.get(item_key)
 
-        if not item_name:
+        if not bf_gen or not item_name:
+            # Handle error: generator or item not found
             await query.edit_message_text(
-                text="Блюдо не найдено (завтрак).",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Назад", callback_data="breakfast")]
-                ])
+                text="Ошибка: Не удалось загрузить детали завтрака.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="breakfast")]])
             )
             return RECIPES
 
         details = bf_gen.get_item_details(item_name)
-        selected_cat = context.user_data.get("bf_cat", "...")
+        selected_cat = context.user_data.get("bf_cat", "...") # Keep track of the category for back button
 
-        # Add a 'Rate' button
+        # Store current recipe info for rating
+        context.user_data['current_recipe_type'] = 'breakfast'
+        context.user_data['current_recipe_name'] = item_name
+
         await query.edit_message_text(
-            text=details + "\n\nПоставьте оценку этому рецепту, это поможет в рекомендациях!",
+            text=details,
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("Оценить", callback_data=f"rate_{item_key}")],
+                [InlineKeyboardButton("⭐ Оценить", callback_data="rate_recipe")], # Add Rate button
                 [InlineKeyboardButton("Назад", callback_data=f"bcat_{selected_cat}")]
             ])
         )
-        return RECIPES
-
-    elif data.startswith("rate_"):
-        # Handle rating
-        item_key = data.split("rate_")[1]
-        item_name = context.user_data.get("bf_map", {}).get(item_key)
-
-        if not item_name:
-            await query.edit_message_text(
-                text="Блюдо не найдено для оценки.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Назад", callback_data="breakfast")]
-                ])
-            )
-            return RECIPES
-
-        # Display rating options
-        await query.edit_message_text(
-            text=f"Оцените блюдо '{item_name}':",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton(str(i), callback_data=f"rate_{item_key}_{i}") for i in range(1, 6)],
-                [InlineKeyboardButton("Назад", callback_data=f"bitem_{item_key}")]
-            ])
-        )
-        return RECIPES
-
-    elif data.startswith("rate_") and len(data.split("_")) == 3:
-        # Capture the rating
-        _, item_key, rating = data.split("_")
-        item_name = context.user_data.get("bf_map", {}).get(item_key)
-
-        if not item_name:
-            await query.edit_message_text(
-                text="Блюдо не найдено для оценки.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Назад", callback_data="breakfast")]
-                ])
-            )
-            return RECIPES
-
-        # Log the rating (this is where you would save it to the database)
-        logger.info(f"User rated '{item_name}' with a {rating}.")
-
-        await query.edit_message_text(
-            text=f"Спасибо за вашу оценку {rating} для '{item_name}'!",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("Назад", callback_data=f"bitem_{item_key}")]
-            ])
-        )
+        # Track RECIPE_VIEW action (assuming track_user decorator handles this based on state/handler)
         return RECIPES
 
     # ---------- Полдники ----------
@@ -252,26 +212,29 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("pitem_"):
         # Детали блюда (полдник)
-        pd_gen = context.user_data["poldnik_generator"]
+        pd_gen = context.user_data.get("poldnik_generator")
         item_map = context.user_data.get("pd_map", {})
         item_key = data
         item_name = item_map.get(item_key)
 
-        if not item_name:
-            await query.edit_message_text(
-                text="Блюдо не найдено (полдник).",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Назад", callback_data="poldnik")]
-                ])
+        if not pd_gen or not item_name:
+             await query.edit_message_text(
+                text="Ошибка: Не удалось загрузить детали полдника.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="poldnik")]])
             )
-            return RECIPES
+             return RECIPES
 
         details = pd_gen.get_item_details(item_name)
         selected_cat = context.user_data.get("pd_cat", "...")
 
+        # Store current recipe info for rating
+        context.user_data['current_recipe_type'] = 'poldnik'
+        context.user_data['current_recipe_name'] = item_name
+
         await query.edit_message_text(
             text=details,
             reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("⭐ Оценить", callback_data="rate_recipe")], # Add Rate button
                 [InlineKeyboardButton("Назад", callback_data=f"pcat_{selected_cat}")]
             ])
         )
@@ -344,36 +307,31 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return RECIPES
 
-    elif data.startswith("dish_"):
+    elif data.startswith("dish_"): # Lunch item details
         dish_key = data
         lunch_generator = context.user_data.get("lunch_generator")
-        if not lunch_generator:
+        dish_mapping = context.user_data.get("dish_mapping", {})
+        dish_name = dish_mapping.get(dish_key)
+        current_category = context.user_data.get('current_category')
+
+        if not lunch_generator or not dish_name or not current_category:
             await query.edit_message_text(
-                text="Ошибка: обеды недоступны.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Назад", callback_data="lunch")]
-                ])
+                text="Ошибка: Не удалось загрузить детали обеда.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="lunch")]])
             )
             return RECIPES
 
-        dish_name = context.user_data["dish_mapping"].get(dish_key)
-        if not dish_name:
-            await query.edit_message_text(
-                text="Ошибка: блюдо не найдено.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]
-                ])
-            )
-            return RECIPES
-
-        # СРАЗУ показываем детали блюда, без промежуточного экрана
         details = lunch_generator.get_dish_details(dish_name)
+
+        # Store current recipe info for rating
+        context.user_data['current_recipe_type'] = 'lunch'
+        context.user_data['current_recipe_name'] = dish_name
 
         await query.edit_message_text(
             text=details,
             reply_markup=InlineKeyboardMarkup([
-                # Кнопка "Назад" возвращает к списку блюд категории
-                [InlineKeyboardButton("Назад", callback_data=f"category_{context.user_data.get('current_category')}")]
+                [InlineKeyboardButton("⭐ Оценить", callback_data="rate_recipe")], # Add Rate button
+                [InlineKeyboardButton("Назад", callback_data=f"category_{current_category}")]
             ])
         )
         return RECIPES
@@ -452,31 +410,150 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("drinks_name_"):
         drinks_generator = context.user_data.get("drinks_generator")
-        if not drinks_generator:
-            await query.edit_message_text(
-                text="Ошибка: нет данных по напиткам.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="drinks")]])
-            )
-            return RECIPES
-
+        drink_map = context.user_data.get("drinks_mapping", {})
         drink_key = data
-        drink_name_map = context.user_data.get("drinks_mapping", {})
-        drink_name = drink_name_map.get(drink_key)
-        if not drink_name:
+        drink_name = drink_map.get(drink_key)
+        current_cat = context.user_data.get('drinks_current_cat')
+
+        if not drinks_generator or not drink_name or not current_cat:
             await query.edit_message_text(
-                text="Напиток не найден.",
+                text="Ошибка: Не удалось загрузить детали напитка.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="drinks")]])
             )
             return RECIPES
 
         details = drinks_generator.get_drink_details(drink_name)
+
+        # Store current recipe info for rating
+        context.user_data['current_recipe_type'] = 'drink'
+        context.user_data['current_recipe_name'] = drink_name
+
         await query.edit_message_text(
             text=details,
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("Назад", callback_data=f"drinks_cat_{context.user_data.get('drinks_current_cat')}")]
+                [InlineKeyboardButton("⭐ Оценить", callback_data="rate_recipe")], # Add Rate button
+                [InlineKeyboardButton("Назад", callback_data=f"drinks_cat_{current_cat}")]
             ])
         )
         return RECIPES
 
+    # --- New handlers for rating ---
+
+    elif data == "rate_recipe":
+        # User clicked "Оценить"
+        # Assuming track_user logs CLICK_RATE_BUTTON based on this data
+        # or needs explicit logging here if track_user isn't sufficient.
+        # Example explicit logging:
+        # db = SessionLocal()
+        # try:
+        #     user_profile = get_or_create_user(db, user.id, ...) # Get user profile
+        #     log_user_action(db, user_profile.id, ActionType.CLICK_RATE_BUTTON, details="Clicked rate button")
+        # finally:
+        #     db.close()
+
+        # Show rating buttons
+        rating_buttons = [
+            InlineKeyboardButton(str(i), callback_data=f"rating_{i}") for i in range(1, 6)
+        ]
+        # Need recipe details again or just modify the keyboard? Modify keyboard is better.
+        current_recipe_name = context.user_data.get('current_recipe_name', 'этот рецепт')
+
+        await query.edit_message_text(
+            text=f"👍 Отличный выбор! Оцените \"{current_recipe_name}\" от 1 до 5.\n"
+                 f"Ваша оценка поможет нам улучшить рекомендации! 😉",
+            reply_markup=InlineKeyboardMarkup([
+                rating_buttons,
+                # Option to go back without rating? Maybe add a Cancel or Back button here.
+                # For now, only rating options.
+            ])
+        )
+        return RECIPES # Stay in the recipes state
+
+    elif data.startswith("rating_"):
+        # User submitted a rating
+        rating_value = int(data.split("_")[1])
+        recipe_type = context.user_data.get('current_recipe_type')
+        recipe_name = context.user_data.get('current_recipe_name')
+        telegram_id = user.id
+
+        if not recipe_type or not recipe_name:
+            await query.edit_message_text(
+                text="😕 Не удалось сохранить оценку. Попробуйте еще раз.",
+                # Provide a way back, maybe to the recipe? Or menu?
+                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("К рецептам", callback_data="healthy_recipes")]])
+            )
+            return RECIPES
+
+        # --- Database Interaction ---
+        db = SessionLocal()
+        try:
+            # We need the internal user ID, not just telegram_id.
+            # Assuming a get_or_create_user function exists in crud.py
+            from crud import get_or_create_user # Import here or at top
+            user_profile = get_or_create_user(
+                db=db,
+                telegram_id=telegram_id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name
+            )
+
+            add_recipe_rating(
+                db=db,
+                user_id=user_profile.id,
+                recipe_type=recipe_type,
+                recipe_name=recipe_name,
+                rating=rating_value
+            )
+            logger.info(f"User {telegram_id} rated '{recipe_name}' ({recipe_type}) as {rating_value}")
+
+            # Assuming track_user logs SUBMIT_RATING based on this data
+            # or needs explicit logging here:
+            # log_user_action(db, user_profile.id, ActionType.SUBMIT_RATING, details=f"Rated {recipe_name} as {rating_value}")
+
+            # Go back to the recipe view with a confirmation message?
+            # Need the callback data for the previous step (e.g., "bcat_...", "category_...")
+            # For simplicity, just show a thank you message and main recipe buttons
+            await query.edit_message_text(
+                text=f"⭐ Спасибо! Вы оценили \"{recipe_name}\" на {rating_value}."
+                     f" Это очень поможет!",
+                reply_markup=InlineKeyboardMarkup([
+                    # We lost the context of the *specific* back button (e.g. "bcat_Каша")
+                    # Maybe just offer back to the main recipe categories?
+                     [InlineKeyboardButton("К рецептам", callback_data="healthy_recipes")],
+                     [InlineKeyboardButton("Главное меню", callback_data="start")]
+                     # Or try to reconstruct the back button if context allows, e.g.:
+                     # [InlineKeyboardButton("Назад", callback_data=context.user_data.get('last_recipe_list_callback', 'healthy_recipes'))]
+                ])
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to save rating for user {telegram_id}, recipe {recipe_name}: {e}")
+            await query.answer("Не удалось сохранить оценку.", show_alert=True)
+            # Maybe show the rating buttons again or go back?
+            await query.edit_message_text(
+                text="Произошла ошибка при сохранении оценки. Попробуйте позже.",
+                 reply_markup=InlineKeyboardMarkup([
+                     [InlineKeyboardButton("К рецептам", callback_data="healthy_recipes")],
+                     [InlineKeyboardButton("Главное меню", callback_data="start")]
+                 ])
+            )
+        finally:
+            db.close()
+
+        return RECIPES # Stay in recipe state or return to MENU? RECIPES seems okay.
+
     # Если никакая ветка не сработала
-    return RECIPES
+    logger.warning(f"Unhandled callback data in recipes_callback: {data}")
+    # Fallback or error message
+    await query.answer("Неизвестная команда.", show_alert=True)
+    # Go back to menu?
+    from handlers_menu import start_menu # Import if not already imported
+    return await start_menu(update, context) # Safest fallback?
+
+# Ensure the track_user decorator is applied if it handles action logging:
+# recipes_callback = track_user(recipes_callback) # If not already done elsewhere
+
+# Make sure add_recipe_rating is defined in crud.py and handles database session/commit/rollback.
+# Make sure get_or_create_user is defined and works correctly.
+# Consider database migrations if using Alembic or similar.

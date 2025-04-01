@@ -17,6 +17,8 @@ class ActionType(enum.Enum):
     PRODUCT_SEARCH = "product_search"
     GPT_QUESTION = "gpt_question"
     RECIPE_VIEW = "recipe_view"
+    CLICK_RATE_BUTTON = "click_rate_button"
+    SUBMIT_RATING = "submit_rating"
 
 class ClientProfile(Base):
     __tablename__ = "client_profiles"
@@ -77,4 +79,29 @@ class UserInteraction(Base):
     session = relationship("UserSession", back_populates="interactions")
     
     def __repr__(self):
-        return f"UserInteraction(id={self.id}, user_id={self.user_id}, action_type={self.action_type}, success={self.success})" 
+        return f"UserInteraction(id={self.id}, user_id={self.user_id}, action_type={self.action_type}, success={self.success})"
+
+# New model for recipe ratings
+class RecipeRating(Base):
+    __tablename__ = "recipe_ratings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("client_profiles.id"), nullable=False)
+    recipe_type = Column(String, nullable=False) # e.g., 'breakfast', 'lunch', 'poldnik', 'drink'
+    recipe_name = Column(String, nullable=False) # The name of the recipe being rated
+    rating = Column(Integer, nullable=False) # Rating from 1 to 5
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("ClientProfile")
+
+    def __repr__(self):
+        return f"<RecipeRating(user_id={self.user_id}, recipe='{self.recipe_name}', rating={self.rating})>"
+
+models_logger.info("RecipeRating model defined")
+
+# Ensure all models are registered with Base metadata if needed elsewhere
+# For example, if you have a Base = declarative_base() line earlier, ensure this model uses it.
+# If Base is imported, ensure it's correctly configured.
+
+# It might be necessary to regenerate the database schema or use migrations (like Alembic)
+# depending on how the database is managed. 
