@@ -10,6 +10,8 @@ from telegram.ext import (
     MessageHandler,
     filters
 )
+import time
+from datetime import datetime
 
 from states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 
@@ -44,9 +46,15 @@ logger.addHandler(file_handler)
 bot_logger = logging.getLogger(__name__)
 
 # Import database and models
-from database import SessionLocal, get_or_create_user
-# Import models before initializing the database
-from models import ClientProfile  
+from database import (
+    SessionLocal, 
+    get_or_create_user, 
+    create_user_session,
+    end_user_session,
+    log_user_interaction,
+    get_user_statistics
+)
+from models import ClientProfile, ActionType
 
 # Импорт хендлеров из отдельных файлов
 from handlers_menu import start_menu, menu_callback, cancel
@@ -56,6 +64,9 @@ from handlers_recipes import recipes_callback
 
 # Импорт конфигурации (TOKEN_BOT)
 from config import TOKEN_BOT
+
+# Dictionary to store active sessions
+active_sessions = {}
 
 # Decorator for tracking user interactions
 def track_user(func):
@@ -69,6 +80,8 @@ def track_user(func):
         
         # Create a database session
         db = SessionLocal()
+        start_time = time.time()
+        
         try:
             bot_logger.info(f"Checking if user {user.id} exists in database...")
             
@@ -81,16 +94,55 @@ def track_user(func):
                 last_name=user.last_name
             )
             
-            if user_profile.interaction_count == 1:
-                bot_logger.info(f"NEW USER created: {user.id} ({user.username or 'No username'}) - {user.first_name} {user.last_name or ''}")
-            else:
-                bot_logger.info(f"Existing user found: {user.id} ({user.username or 'No username'}) - interaction count: {user_profile.interaction_count}")
+            # Handle session tracking
+            if handler_name == 'start_menu':
+                # Create new session when user starts bot
+                session = create_user_session(db, user_profile.id)
+                active_sessions[user.id] = session.id
+                bot_logger.info(f"Created new session for user {user.id}: {session.id}")
+            elif handler_name == 'cancel':
+                # End session when user cancels
+                if user.id in active_sessions:
+                    session_id = active_sessions[user.id]
+                    end_user_session(db, session_id)
+                    del active_sessions[user.id]
+                    bot_logger.info(f"Ended session {session_id} for user {user.id}")
+
+            # Log the interaction
+            action_type = handler_name
+            action_data = str(update.callback_query.data) if update.callback_query else str(update.message.text) if update.message else None
             
             # Call the original handler function
             bot_logger.debug(f"Calling original handler: {handler_name}")
-            return await func(update, context, *args, **kwargs)
+            result = await func(update, context, *args, **kwargs)
+            
+            # Calculate response time
+            response_time = int((time.time() - start_time) * 1000)  # Convert to milliseconds
+            
+            # Log successful interaction
+            log_user_interaction(
+                db=db,
+                user_id=user_profile.id,
+                action_type=action_type,
+                action_data=action_data,
+                response_time=response_time,
+                success=True
+            )
+            
+            return result
+            
         except Exception as e:
             bot_logger.error(f"Error tracking user: {e}", exc_info=True)
+            # Log failed interaction
+            if 'user_profile' in locals():
+                log_user_interaction(
+                    db=db,
+                    user_id=user_profile.id,
+                    action_type=handler_name,
+                    action_data=str(e),
+                    response_time=int((time.time() - start_time) * 1000),
+                    success=False
+                )
             # Still call the original function even if tracking fails
             return await func(update, context, *args, **kwargs)
         finally:
@@ -107,6 +159,41 @@ product_user_message = track_user(product_user_message)
 recipes_callback = track_user(recipes_callback)
 cancel = track_user(cancel)
 
+async def get_stats(update, context):
+    """Handler for getting user statistics"""
+    user = update.effective_user
+    
+    # Check if user is authorized to view stats
+    if str(user.id) != "669201758":
+        await update.message.reply_text("⛔️ Sorry, you are not authorized to view statistics.")
+        return
+    
+    db = SessionLocal()
+    try:
+        user_profile = get_or_create_user(
+            db=db,
+            telegram_id=user.id,
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name
+        )
+        
+        stats = get_user_statistics(db, user_profile.id)
+        
+        message = (
+            f"📊 Statistics Overview:\n\n"
+            f"Total Sessions: {stats['total_sessions']}\n"
+            f"Completed Sessions: {stats['completed_sessions']}\n"
+            f"Total Interactions: {stats['total_interactions']}\n"
+            f"Successful Interactions: {stats['successful_interactions']}\n"
+            f"Average Session Duration: {stats['average_session_duration']} seconds\n"
+        )
+        
+        await update.message.reply_text(message)
+        
+    finally:
+        db.close()
+
 def main():
     """
     Главная точка входа: создаём приложение, регистрируем ConversationHandler и запускаем бота.
@@ -120,6 +207,9 @@ def main():
     bot_logger.info("Database initialized successfully")
     
     application = ApplicationBuilder().token(TOKEN_BOT).build()
+
+    # Add stats command handler
+    application.add_handler(CommandHandler("stats", get_stats))
 
     # ConversationHandler описывает сценарий общения бота с пользователем.
     bot_logger.info("Configuring conversation handler...")
