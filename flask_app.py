@@ -23,7 +23,11 @@ def post_receive():
         # Логируем входящий запрос
         app.logger.info('Received webhook: %s', request.data)
         # Выполнить ваш скрипт post-receive
-        subprocess.call(['/root/project/Assistant/hooks/post-receive'])
+        try:
+    	    subprocess.check_call(['/root/project/Assistant/hooks/post-receive'])
+	except subprocess.CalledProcessError as e:
+    	    app.logger.error(f'Ошибка при вызове post-receive: {e}')
+    	    return 'Internal Server Error', 500
         return '', 204
     else:
         return '', 400
