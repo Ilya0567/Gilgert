@@ -39,6 +39,7 @@ class ClientProfile(Base):
         """String representation of the ClientProfile model"""
         return f"ClientProfile(id={self.id}, telegram_id={self.telegram_id}, username={self.username}, interaction_count={self.interaction_count})"
 
+
 class UserSession(Base):
     __tablename__ = "user_sessions"
 
