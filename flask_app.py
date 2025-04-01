@@ -23,7 +23,12 @@ def post_receive():
         # Логируем входящий запрос
         app.logger.info('Received webhook: %s', request.data)
         # Выполнить ваш скрипт post-receive
-        subprocess.call(['/root/project/Assistant/hooks/post-receive'])
+        # нужно обработать исключение
+        try:
+            subprocess.call(['/root/project/Assistant/hooks/post-receive'])
+        except Exception as e:
+            app.logger.error(f'Error executing post-receive: {e}')
+            return '', 500
         return '', 204
     else:
         return '', 400
