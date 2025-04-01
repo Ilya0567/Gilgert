@@ -1,15 +1,17 @@
 from flask import Flask, request
 import subprocess
 import logging
-
+import os
 app = Flask(__name__)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+log_path = os.path.join(BASE_DIR, "flask_app.log")  # ✅ корректный путь
 # Настройка логирования
 logging.basicConfig(
     level=logging.DEBUG, 
     format='%(asctime)s - %(message)s',
     handlers=[
-        logging.FileHandler('root/project/Assistant/flask_app.log'),  # Логи в файл
+        logging.FileHandler(log_path),  # Логи в файл
         logging.StreamHandler()  # Логи в консоль (по желанию)
     ]
 )
