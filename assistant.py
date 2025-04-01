@@ -49,7 +49,7 @@ bot_logger = logging.getLogger(__name__)
 from database import (
     SessionLocal, 
     get_or_create_user, 
-    create_user_session,
+    get_or_create_session,
     end_user_session,
     log_user_interaction,
     get_user_statistics
@@ -97,7 +97,7 @@ def track_user(func):
             # Handle session tracking
             if handler_name == 'start_menu':
                 # Create new session when user starts bot
-                session = create_user_session(db, user_profile.id)
+                session = get_or_create_session(db, user_profile.id)
                 active_sessions[user.id] = session.id
                 bot_logger.info(f"Created new session for user {user.id}: {session.id}")
             elif handler_name == 'cancel':
