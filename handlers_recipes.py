@@ -120,10 +120,61 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         details = bf_gen.get_item_details(item_name)
         selected_cat = context.user_data.get("bf_cat", "...")
 
+        # Add a 'Rate' button
         await query.edit_message_text(
-            text=details,
+            text=details + "\n\nПоставьте оценку этому рецепту, это поможет в рекомендациях!",
             reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Оценить", callback_data=f"rate_{item_key}")],
                 [InlineKeyboardButton("Назад", callback_data=f"bcat_{selected_cat}")]
+            ])
+        )
+        return RECIPES
+
+    elif data.startswith("rate_"):
+        # Handle rating
+        item_key = data.split("rate_")[1]
+        item_name = context.user_data.get("bf_map", {}).get(item_key)
+
+        if not item_name:
+            await query.edit_message_text(
+                text="Блюдо не найдено для оценки.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Назад", callback_data="breakfast")]
+                ])
+            )
+            return RECIPES
+
+        # Display rating options
+        await query.edit_message_text(
+            text=f"Оцените блюдо '{item_name}':",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton(str(i), callback_data=f"rate_{item_key}_{i}") for i in range(1, 6)],
+                [InlineKeyboardButton("Назад", callback_data=f"bitem_{item_key}")]
+            ])
+        )
+        return RECIPES
+
+    elif data.startswith("rate_") and len(data.split("_")) == 3:
+        # Capture the rating
+        _, item_key, rating = data.split("_")
+        item_name = context.user_data.get("bf_map", {}).get(item_key)
+
+        if not item_name:
+            await query.edit_message_text(
+                text="Блюдо не найдено для оценки.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Назад", callback_data="breakfast")]
+                ])
+            )
+            return RECIPES
+
+        # Log the rating (this is where you would save it to the database)
+        logger.info(f"User rated '{item_name}' with a {rating}.")
+
+        await query.edit_message_text(
+            text=f"Спасибо за вашу оценку {rating} для '{item_name}'!",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Назад", callback_data=f"bitem_{item_key}")]
             ])
         )
         return RECIPES
