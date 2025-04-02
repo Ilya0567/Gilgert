@@ -52,10 +52,8 @@ from database import (
     get_or_create_session,
     end_user_session,
     log_user_interaction,
-    get_user_statistics
+        
 )
-from models import ClientProfile, ActionType
-
 # Импорт хендлеров из отдельных файлов
 from handlers_menu import start_menu, menu_callback, cancel
 from handlers_gpt import gpt_user_message
@@ -159,40 +157,7 @@ product_user_message = track_user(product_user_message)
 recipes_callback = track_user(recipes_callback)
 cancel = track_user(cancel)
 
-async def get_stats(update, context):
-    """Handler for getting user statistics"""
-    user = update.effective_user
-    
-    # Check if user is authorized to view stats
-    if str(user.id) != "669201758":
-        await update.message.reply_text("⛔️ Sorry, you are not authorized to view statistics.")
-        return
-    
-    db = SessionLocal()
-    try:
-        user_profile = get_or_create_user(
-            db=db,
-            telegram_id=user.id,
-            username=user.username,
-            first_name=user.first_name,
-            last_name=user.last_name
-        )
-        
-        stats = get_user_statistics(db, user_profile.id)
-        
-        message = (
-            f"📊 Statistics Overview:\n\n"
-            f"Total Sessions: {stats['total_sessions']}\n"
-            f"Completed Sessions: {stats['completed_sessions']}\n"
-            f"Total Interactions: {stats['total_interactions']}\n"
-            f"Successful Interactions: {stats['successful_interactions']}\n"
-            f"Average Session Duration: {stats['average_session_duration']} seconds\n"
-        )
-        
-        await update.message.reply_text(message)
-        
-    finally:
-        db.close()
+from stats_handler import get_stats
 
 def main():
     """
