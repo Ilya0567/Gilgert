@@ -163,11 +163,8 @@ cancel = track_user(cancel)
 
 from stats_handler import get_stats
 
-async def send_daily_message(context):
+async def send_daily_message(context, chat_id):
     """Отправляет ежедневное сообщение пользователям."""
-    job = context.job
-    chat_id = job.context
-
     # Получаем имя пользователя
     user = await context.bot.get_chat(chat_id)
     user_name = user.first_name
@@ -215,8 +212,7 @@ def schedule_daily_message(application):
                 'interval',
                 days=1,
                 start_date=next_run_time,
-                args=[application],
-                context=user.telegram_id  # Используем ID чата пользователя
+                args=[application, user.telegram_id]  # Передаем ID чата пользователя через args
             )
     finally:
         db.close()
