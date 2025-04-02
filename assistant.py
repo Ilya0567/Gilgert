@@ -193,12 +193,12 @@ async def send_daily_message(context, chat_id):
 
 
 def schedule_daily_message(application):
-    """Настраивает ежедневную отправку сообщений в 1:00 по московскому времени."""
+    """Настраивает ежедневную отправку сообщений в 1:32 по московскому времени."""
     loop = asyncio.get_event_loop()
     scheduler = AsyncIOScheduler(event_loop=loop)
     moscow_tz = pytz.timezone('Europe/Moscow')
     now = datetime.now(moscow_tz)
-    next_run_time = now.replace(hour=1, minute=0, second=0, microsecond=0)
+    next_run_time = now.replace(hour=1, minute=32, second=0, microsecond=0)
     if now >= next_run_time:
         next_run_time += timedelta(days=1)
 
