@@ -62,6 +62,7 @@ from handlers_menu import start_menu, menu_callback, cancel
 from handlers_gpt import gpt_user_message
 from handlers_product import product_user_message
 from handlers_recipes import recipes_callback  
+from models import ClientProfile
 
 # Импорт конфигурации (TOKEN_BOT)
 from config import TOKEN_BOT
