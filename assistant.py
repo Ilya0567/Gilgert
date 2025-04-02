@@ -12,10 +12,11 @@ from telegram.ext import (
 )
 import time
 from datetime import datetime, timedelta
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import pytz
 import asyncio
+from telegram.ext import CallbackContext
 
 from states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 
@@ -198,7 +199,7 @@ def schedule_daily_message(application):
     scheduler = AsyncIOScheduler(event_loop=loop)
     moscow_tz = pytz.timezone('Europe/Moscow')
     now = datetime.now(moscow_tz)
-    next_run_time = now.replace(hour=1, minute=32, second=0, microsecond=0)
+    next_run_time = now.replace(hour=12, minute=0, second=0, microsecond=0)
     if now >= next_run_time:
         next_run_time += timedelta(days=1)
 
@@ -221,6 +222,19 @@ def schedule_daily_message(application):
 
     scheduler.start()
     bot_logger.info("Daily message scheduler started.")
+
+async def handle_emoji_response(update: Update, context: CallbackContext):
+    """Обрабатывает нажатие на кнопки с эмодзи."""
+    query = update.callback_query
+    await query.answer()
+
+    # Изменяем сообщение на благодарственное
+    await query.edit_message_text(
+        text="Спасибо за ваш ответ! 😊",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 В главное меню", callback_data='back_to_menu')]
+        ])
+    )
 
 def main():
     """
@@ -249,7 +263,6 @@ def main():
             ],
             GPT_QUESTION: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, gpt_user_message),
-                # И ловим колбэки "back_to_menu" 
                 CallbackQueryHandler(menu_callback, pattern="^back_to_menu$")
             ],
             CHECK_PRODUCT: [
@@ -265,6 +278,9 @@ def main():
     )
 
     application.add_handler(conv_handler)
+
+    # Добавляем обработчик для нажатий на эмодзи
+    application.add_handler(CallbackQueryHandler(handle_emoji_response, pattern="^(sad|neutral|happy)$"))
 
     # Вызов функции schedule_daily_message в main()
     schedule_daily_message(application)
