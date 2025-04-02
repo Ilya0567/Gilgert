@@ -21,13 +21,20 @@ async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         recipe_ratings = db.query(RecipeRating).all()
 
         # Формируем сообщение с данными
-        message = "📊 Содержание всех таблиц:\n\n"
-        message += "Client Profiles:\n" + "\n".join([str(profile) for profile in client_profiles]) + "\n\n"
-        message += "User Sessions:\n" + "\n".join([str(session) for session in user_sessions]) + "\n\n"
-        message += "User Interactions:\n" + "\n".join([str(interaction) for interaction in user_interactions]) + "\n\n"
-        message += "Recipe Ratings:\n" + "\n".join([str(rating) for rating in recipe_ratings]) + "\n\n"
+        messages = []
+        messages.append("📊 Содержание всех таблиц:\n\n")
+        messages.append("Client Profiles:\n" + "\n".join([str(profile) for profile in client_profiles]) + "\n\n")
+        messages.append("User Sessions:\n" + "\n".join([str(session) for session in user_sessions]) + "\n\n")
+        messages.append("User Interactions:\n" + "\n".join([str(interaction) for interaction in user_interactions]) + "\n\n")
+        messages.append("Recipe Ratings:\n" + "\n".join([str(rating) for rating in recipe_ratings]) + "\n\n")
         
-        await update.message.reply_text(message)
+        # Отправляем каждую часть сообщения отдельно
+        for message in messages:
+            if len(message) > 4096:  # Telegram ограничивает длину сообщения 4096 символами
+                for i in range(0, len(message), 4096):
+                    await update.message.reply_text(message[i:i+4096])
+            else:
+                await update.message.reply_text(message)
         
     finally:
         db.close() 
