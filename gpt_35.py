@@ -1,6 +1,6 @@
 from openai import OpenAI
 
-KEY = "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"
+KEY = "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"
 
 client = OpenAI(api_key=KEY)
 
