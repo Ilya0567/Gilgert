@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 class BreakfastGenerator:
     """
     Класс для работы с таблицей завтраков/полдников (один файл breakfast.csv).
