@@ -11,7 +11,10 @@ from telegram.ext import (
     filters
 )
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import pytz
 
 from states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 
@@ -159,6 +162,67 @@ cancel = track_user(cancel)
 
 from stats_handler import get_stats
 
+async def send_daily_message(context):
+    """Отправляет ежедневное сообщение пользователям."""
+    job = context.job
+    chat_id = job.context
+
+    # Получаем имя пользователя
+    user = await context.bot.get_chat(chat_id)
+    user_name = user.first_name
+
+    # Логируем отправку сообщения
+    bot_logger.info(f"Sending daily message to user: {user_name} (ID: {chat_id})")
+
+    # Создаем кнопки с эмодзи
+    keyboard = [
+        [InlineKeyboardButton("😢", callback_data='sad')],
+        [InlineKeyboardButton("😐", callback_data='neutral')],
+        [InlineKeyboardButton("😊", callback_data='happy')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    # Отправляем сообщение
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"Привет, {user_name}! Как ты себя чувствуешь, как настроение? Оцени своё состояние.",
+        reply_markup=reply_markup
+    )
+
+    # Логируем успешную отправку
+    bot_logger.info(f"Message sent successfully to user: {user_name} (ID: {chat_id})")
+
+
+def schedule_daily_message(application):
+    """Настраивает ежедневную отправку сообщений в 1:00 по московскому времени."""
+    scheduler = AsyncIOScheduler()
+    moscow_tz = pytz.timezone('Europe/Moscow')
+    now = datetime.now(moscow_tz)
+    next_run_time = now.replace(hour=1, minute=0, second=0, microsecond=0)
+    if now >= next_run_time:
+        next_run_time += timedelta(days=1)
+
+    # Получаем всех пользователей из базы данных
+    db = SessionLocal()
+    try:
+        users = db.query(ClientProfile).all()
+        for user in users:
+            bot_logger.info(f"Scheduling daily message for user: {user.username} (ID: {user.telegram_id})")
+            # Добавляем задачу в планировщик для каждого пользователя
+            scheduler.add_job(
+                send_daily_message,
+                'interval',
+                days=1,
+                start_date=next_run_time,
+                args=[application],
+                context=user.telegram_id  # Используем ID чата пользователя
+            )
+    finally:
+        db.close()
+
+    scheduler.start()
+    bot_logger.info("Daily message scheduler started.")
+
 def main():
     """
     Главная точка входа: создаём приложение, регистрируем ConversationHandler и запускаем бота.
@@ -202,6 +266,9 @@ def main():
     )
 
     application.add_handler(conv_handler)
+
+    # Вызов функции schedule_daily_message в main()
+    schedule_daily_message(application)
 
     bot_logger.info("Bot started and running...")
     application.run_polling()
