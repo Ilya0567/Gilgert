@@ -1,7 +1,7 @@
 # crud.py
 
 from sqlalchemy.orm import Session
-from .models import ClientProfile, RecipeRating, DailyHealthCheck
+from .models import ClientProfile, RecipeRating, DailyHealthCheck, BroadcastMessage
 import logging
 from datetime import datetime, timedelta
 
@@ -148,4 +148,56 @@ def get_user_health_stats(db: Session, user_id: int, days: int = 30) -> dict:
         stats['neutral_percent'] = (stats['neutral'] / stats['total_checks']) * 100
         stats['sad_percent'] = (stats['sad'] / stats['total_checks']) * 100
     
-    return stats 
+    return stats
+
+def create_broadcast(
+    db: Session,
+    admin_id: int,
+    message: str,
+    scheduled_time: datetime
+) -> BroadcastMessage:
+    """
+    Create a new broadcast message
+    """
+    broadcast = BroadcastMessage(
+        admin_id=admin_id,
+        message=message,
+        scheduled_time=scheduled_time
+    )
+    
+    db.add(broadcast)
+    db.commit()
+    db.refresh(broadcast)
+    
+    logger.info(f"Created broadcast message scheduled for {scheduled_time}")
+    return broadcast
+
+def get_pending_broadcasts(db: Session) -> list[BroadcastMessage]:
+    """
+    Get all broadcasts that haven't been sent and are due to be sent
+    """
+    return (
+        db.query(BroadcastMessage)
+        .filter(
+            BroadcastMessage.sent == False,
+            BroadcastMessage.scheduled_time <= datetime.now()
+        )
+        .all()
+    )
+
+def mark_broadcast_sent(db: Session, broadcast_id: int) -> None:
+    """
+    Mark a broadcast as sent
+    """
+    broadcast = db.query(BroadcastMessage).filter(BroadcastMessage.id == broadcast_id).first()
+    if broadcast:
+        broadcast.sent = True
+        broadcast.sent_at = datetime.now()
+        db.commit()
+        logger.info(f"Marked broadcast {broadcast_id} as sent")
+
+def get_all_active_users(db: Session) -> list[ClientProfile]:
+    """
+    Get all users that have interacted with the bot
+    """
+    return db.query(ClientProfile).filter(ClientProfile.is_active == True).all() 

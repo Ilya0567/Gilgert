@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -115,6 +115,25 @@ class DailyHealthCheck(Base):
         return f"<DailyHealthCheck(user_id={self.user_id}, mood='{self.mood}', timestamp={self.timestamp})>"
 
 models_logger.info("DailyHealthCheck model defined")
+
+class BroadcastMessage(Base):
+    __tablename__ = "broadcast_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, ForeignKey("client_profiles.id"), nullable=False)
+    message = Column(Text, nullable=False)
+    scheduled_time = Column(DateTime(timezone=True), nullable=False)
+    sent = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    sent_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Relationship to admin who created the message
+    admin = relationship("ClientProfile")
+
+    def __repr__(self):
+        return f"<BroadcastMessage(id={self.id}, scheduled_time={self.scheduled_time}, sent={self.sent})>"
+
+models_logger.info("BroadcastMessage model defined")
 
 # Ensure all models are registered with Base metadata if needed elsewhere
 # For example, if you have a Base = declarative_base() line earlier, ensure this model uses it.

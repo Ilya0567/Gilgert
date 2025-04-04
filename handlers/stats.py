@@ -1,21 +1,24 @@
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 from datetime import datetime, timedelta
+import logging
 
 from database.database import SessionLocal
 from database.models import RecipeRating, DailyHealthCheck, ClientProfile
 from database.crud import get_user_health_stats
 from sqlalchemy import func
-from utils.config import ADMIN_ID  # Добавь свой Telegram ID в config.py
+from utils.config import ADMIN_IDS
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import pytz
+
+logger = logging.getLogger(__name__)
 
 async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler for getting user statistics"""
     user = update.effective_user
     
     # Check if user is authorized to view stats
-    if str(user.id) != "669201758":
+    if str(user.id) not in ADMIN_IDS:
         await update.message.reply_text("⛔️ Sorry, you are not authorized to view statistics.")
         return
     
@@ -92,12 +95,15 @@ def schedule_daily_message(application):
 
 def is_admin(user_id: int) -> bool:
     """Проверяет, является ли пользователь админом"""
-    return str(user_id) == str(ADMIN_ID)
+    return str(user_id) in ADMIN_IDS
 
 async def check_admin(update: Update) -> bool:
     """Проверяет права админа и отправляет сообщение если нет доступа"""
     if not is_admin(update.effective_user.id):
-        await update.message.reply_text("⛔ У вас нет доступа к этой команде.")
+        await update.message.reply_text(
+            "⛔ У вас нет доступа к этой команде.\n"
+            f"Ваш ID: {update.effective_user.id}"
+        )
         return False
     return True
 

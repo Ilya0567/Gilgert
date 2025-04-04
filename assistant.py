@@ -168,6 +168,8 @@ from stats_handler import get_stats
 
 from handlers.stats import stats_recipes, stats_health, stats_users, stats_help
 
+from handlers.broadcast import get_broadcast_handler, process_broadcasts
+
 async def send_daily_message(context, chat_id):
     """Отправляет ежедневное сообщение пользователям."""
     # Получаем имя пользователя
@@ -284,6 +286,9 @@ def main():
     application.add_handler(CommandHandler("stats_users", stats_users))
     application.add_handler(CommandHandler("stats_help", stats_help))
 
+    # Добавляем обработчик рассылок
+    application.add_handler(get_broadcast_handler())
+
     # ConversationHandler описывает сценарий общения бота с пользователем.
     bot_logger.info("Configuring conversation handler...")
     conv_handler = ConversationHandler(
@@ -313,10 +318,13 @@ def main():
     # Добавляем обработчик для нажатий на эмодзи
     application.add_handler(CallbackQueryHandler(handle_emoji_response, pattern="^(sad|neutral|happy)$"))
 
+    # Настраиваем проверку рассылок каждую минуту
+    job_queue = application.job_queue
+    job_queue.run_repeating(process_broadcasts, interval=60)
+
     # Вызов функции schedule_daily_message в main()
     schedule_daily_message(application)
 
-    bot_logger.info("Bot started and running...")
     application.run_polling()
 
 
