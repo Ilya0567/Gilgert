@@ -120,16 +120,15 @@ models_logger.info("DailyHealthCheck model defined")
 class BroadcastMessage(Base):
     __tablename__ = "broadcast_messages"
 
-    id = Column(Integer, primary_key=True, index=True)
-    admin_id = Column(Integer, ForeignKey("client_profiles.id"), nullable=False)
-    message = Column(Text, nullable=False)
-    scheduled_time = Column(DateTime(timezone=True), nullable=False)
-    sent = Column(Boolean, default=False)
+    id = Column(Integer, primary_key=True)
+    admin_id = Column(Integer, ForeignKey("client_profiles.id"))
+    message = Column(String)
+    scheduled_time = Column(DateTime(timezone=True))
+    sent = Column(Boolean, default=False)  # Единое поле для статуса отправки
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     sent_at = Column(DateTime(timezone=True), nullable=True)
-    is_sent = Column(Boolean, default=False)
-    
-    # Relationship to admin who created the message
+
+    # Отношения
     admin = relationship("ClientProfile")
 
     def __repr__(self):

@@ -151,7 +151,7 @@ def get_pending_broadcasts(db):
     return db.query(BroadcastMessage).filter(
         and_(
             BroadcastMessage.scheduled_time <= now,
-            BroadcastMessage.is_sent == False
+            BroadcastMessage.sent == False
         )
     ).all()
 
@@ -159,7 +159,8 @@ def mark_broadcast_sent(db, broadcast_id):
     """Помечает рассылку как отправленную"""
     broadcast = db.query(BroadcastMessage).get(broadcast_id)
     if broadcast:
-        broadcast.is_sent = True
+        broadcast.sent = True
+        broadcast.sent_at = datetime.now()
         db.commit()
 
 def get_active_users(db):
