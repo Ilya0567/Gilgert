@@ -3,10 +3,12 @@ from telegram.ext import ContextTypes, ConversationHandler, CommandHandler, Mess
 from datetime import datetime
 import pytz
 import logging
+from sqlalchemy import and_
 
 from database.database import SessionLocal
 from database.crud import create_broadcast, get_or_create_user, get_all_active_users, mark_broadcast_sent
 from utils.config import ADMIN_IDS
+from database.models import Broadcast, ClientProfile
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +125,7 @@ async def process_broadcasts(context: ContextTypes.DEFAULT_TYPE) -> None:
         
         for broadcast in broadcasts:
             # Получаем всех активных пользователей
-            users = get_all_active_users(db)
+            users = get_active_users(db)
             
             # Отправляем сообщение каждому пользователю
             for user in users:
@@ -140,6 +142,27 @@ async def process_broadcasts(context: ContextTypes.DEFAULT_TYPE) -> None:
             
     finally:
         db.close()
+
+def get_pending_broadcasts(db):
+    """Получает все рассылки, время отправки которых уже наступило"""
+    now = datetime.now()
+    return db.query(Broadcast).filter(
+        and_(
+            Broadcast.scheduled_time <= now,
+            Broadcast.is_sent == False
+        )
+    ).all()
+
+def mark_broadcast_sent(db, broadcast_id):
+    """Помечает рассылку как отправленную"""
+    broadcast = db.query(Broadcast).get(broadcast_id)
+    if broadcast:
+        broadcast.is_sent = True
+        db.commit()
+
+def get_active_users(db):
+    """Получает список активных пользователей"""
+    return db.query(ClientProfile).filter(ClientProfile.is_active == True).all()
 
 def get_broadcast_handler() -> ConversationHandler:
     """Возвращает handler для создания рассылок"""

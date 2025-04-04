@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, Text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, Text, Float
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
 from .database import Base
 import logging
 import enum
@@ -126,6 +127,7 @@ class BroadcastMessage(Base):
     sent = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     sent_at = Column(DateTime(timezone=True), nullable=True)
+    is_sent = Column(Boolean, default=False)
     
     # Relationship to admin who created the message
     admin = relationship("ClientProfile")
