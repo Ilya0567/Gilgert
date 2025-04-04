@@ -169,6 +169,7 @@ from stats_handler import get_stats
 from handlers.stats import stats_recipes, stats_health, stats_users, stats_help
 
 from handlers.broadcast import get_broadcast_handler, process_broadcasts
+from handlers.admin import admin_commands
 
 async def send_daily_message(context, chat_id):
     """Отправляет ежедневное сообщение пользователям."""
@@ -279,6 +280,9 @@ def main():
     bot_logger.info("Database initialized successfully")
     
     application = ApplicationBuilder().token(TOKEN_BOT).build()
+
+    # Добавляем обработчик команды админа
+    application.add_handler(CommandHandler("admin", admin_commands))
 
     # Добавляем обработчики команд статистики
     application.add_handler(CommandHandler("stats_recipes", stats_recipes))

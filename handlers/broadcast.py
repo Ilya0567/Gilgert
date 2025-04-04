@@ -67,9 +67,11 @@ async def broadcast_time(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Проверяем, что время в будущем
         if scheduled_time <= datetime.now(pytz.timezone('Europe/Moscow')):
             await update.message.reply_text(
-                "❌ Время должно быть в будущем. Попробуйте снова с командой /broadcast"
+                "❌ Время должно быть в будущем.\n"
+                "🕒 Введите время отправки в формате 'ГГГГ-ММ-ДД ЧЧ:ММ'\n"
+                "Например: 2024-04-05 15:30"
             )
-            return ConversationHandler.END
+            return ENTER_TIME
         
         db = SessionLocal()
         try:
@@ -95,18 +97,18 @@ async def broadcast_time(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 f"📝 Текст: {context.user_data['broadcast_message']}\n"
                 f"🕒 Время отправки: {scheduled_time.strftime('%Y-%m-%d %H:%M')}"
             )
+            return ConversationHandler.END
             
         finally:
             db.close()
             
     except ValueError:
         await update.message.reply_text(
-            "❌ Неверный формат времени. Используйте формат 'ГГГГ-ММ-ДД ЧЧ:ММ'\n"
-            "Например: 2024-04-05 15:30\n\n"
-            "Начните сначала с командой /broadcast"
+            "❌ Неверный формат времени.\n"
+            "🕒 Введите время отправки в формате 'ГГГГ-ММ-ДД ЧЧ:ММ'\n"
+            "Например: 2024-04-05 15:30"
         )
-    
-    return ConversationHandler.END
+        return ENTER_TIME
 
 async def broadcast_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Отменяет создание рассылки"""
