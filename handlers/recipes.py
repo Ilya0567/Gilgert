@@ -4,17 +4,17 @@ import logging
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 
-from ..utils.states import MENU, RECIPES
-from ..utils.config import DISHES
-from ..meals import lunch
-from ..meals import drinks
-from ..meals import breakfast    # ваш класс BreakfastGenerator
-from ..meals import poldnik      # ваш класс PoldnikGenerator
+from utils.states import MENU, RECIPES
+from utils.config import DISHES
+from meals import lunch
+from meals import drinks
+from meals import breakfast    # ваш класс BreakfastGenerator
+from meals import poldnik      # ваш класс PoldnikGenerator
 
 # Added imports
-from ..database.database import SessionLocal # Assuming SessionLocal is here
-from ..database.crud import add_recipe_rating # Assuming function to add rating is here
-from ..database.models import ActionType # Import ActionType for tracking
+from database.database import SessionLocal # Assuming SessionLocal is here
+from database.crud import add_recipe_rating # Assuming function to add rating is here
+from database.models import ActionType # Import ActionType for tracking
 
 logger = logging.getLogger(__name__)
 
@@ -489,7 +489,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             # We need the internal user ID, not just telegram_id.
             # Assuming a get_or_create_user function exists in crud.py
-            from ..database.crud import get_or_create_user # Import here or at top
+            from database.crud import get_or_create_user # Import here or at top
             user_profile = get_or_create_user(
                 db=db,
                 telegram_id=telegram_id,

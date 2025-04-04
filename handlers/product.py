@@ -3,9 +3,9 @@ import logging
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 
-from ..utils.states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
-from ..utils.data_operation import check_product, id_request
-from ..utils.config import CHAT_ID
+from utils.states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
+from utils.data_operation import check_product, id_request
+from utils.config import CHAT_ID
 
 logger = logging.getLogger(__name__)
 

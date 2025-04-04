@@ -3,7 +3,7 @@ import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
-from ..utils.states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
+from utils.states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 
 logger = logging.getLogger(__name__)
 
