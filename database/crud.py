@@ -1,7 +1,7 @@
 # crud.py
 
 from sqlalchemy.orm import Session
-from models import ClientProfile, RecipeRating
+from .models import ClientProfile, RecipeRating
 import logging
 
 logger = logging.getLogger(__name__)

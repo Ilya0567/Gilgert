@@ -25,7 +25,7 @@ def init_db():
     """Initialize the database by creating all tables."""
     # Import all models here to ensure they're registered with Base
     db_logger.info("Importing models before creating tables...")
-    import models
+    from . import models
     
     db_logger.info("Creating database tables...")
     Base.metadata.create_all(bind=engine)
@@ -43,7 +43,7 @@ def get_db():
 
 def get_or_create_user(db, telegram_id, username=None, first_name=None, last_name=None):
     """Get or create user profile."""
-    from models import ClientProfile
+    from .models import ClientProfile
     
     db_logger.info(f"Looking for user with telegram_id: {telegram_id}")
     user = db.query(ClientProfile).filter(ClientProfile.telegram_id == str(telegram_id)).first()
@@ -80,7 +80,7 @@ def get_or_create_user(db, telegram_id, username=None, first_name=None, last_nam
 
 def get_or_create_session(db, user_id):
     """Get current active session or create new one if needed."""
-    from models import UserSession
+    from .models import UserSession
     
     # Get the latest session for the user
     latest_session = (
@@ -118,7 +118,7 @@ def get_or_create_session(db, user_id):
 
 def end_user_session(db, session_id):
     """End a user session and calculate its duration."""
-    from models import UserSession
+    from .models import UserSession
     
     db_logger.info(f"Ending session {session_id}")
     session = db.query(UserSession).filter(UserSession.id == session_id).first()
@@ -134,7 +134,7 @@ def end_user_session(db, session_id):
 
 def log_user_interaction(db, user_id, action_type, action_data, response_time=None, success=True):
     """Log a user interaction and update session."""
-    from models import UserInteraction
+    from .models import UserInteraction
     
     # First, get or create a session
     session = get_or_create_session(db, user_id)
@@ -155,7 +155,7 @@ def log_user_interaction(db, user_id, action_type, action_data, response_time=No
 
 def get_user_statistics(db, user_id):
     """Get statistics for a specific user."""
-    from models import UserSession, UserInteraction
+    from .models import UserSession, UserInteraction
     
     # Get completed sessions (more than SESSION_TIMEOUT since last interaction)
     current_time = datetime.now()

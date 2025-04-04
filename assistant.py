@@ -18,7 +18,7 @@ import pytz
 import asyncio
 from telegram.ext import CallbackContext
 
-from states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
+from utils.states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 
 # Set up logging first
 LOG_FILENAME = 'bot.log'
@@ -51,23 +51,22 @@ logger.addHandler(file_handler)
 bot_logger = logging.getLogger(__name__)
 
 # Import database and models
-from database import (
+from database.database import (
     SessionLocal, 
     get_or_create_user, 
     get_or_create_session,
     end_user_session,
     log_user_interaction,
-        
 )
 # Импорт хендлеров из отдельных файлов
-from handlers_menu import start_menu, menu_callback, cancel
-from handlers_gpt import gpt_user_message
-from handlers_product import product_user_message
-from handlers_recipes import recipes_callback  
-from models import ClientProfile
+from handlers.menu import start_menu, menu_callback, cancel
+from handlers.gpt import gpt_user_message
+from handlers.product import product_user_message
+from handlers.recipes import recipes_callback  
+from database.models import ClientProfile
 
 # Импорт конфигурации (TOKEN_BOT)
-from config import TOKEN_BOT
+from utils.config import TOKEN_BOT
 
 # Dictionary to store active sessions
 active_sessions = {}
@@ -243,7 +242,7 @@ def main():
     bot_logger.info("Starting bot application...")
     
     # Import and initialize database here
-    from database import init_db
+    from database.database import init_db
     bot_logger.info("Initializing database...")
     init_db()
     bot_logger.info("Database initialized successfully")
