@@ -8,7 +8,7 @@ from sqlalchemy import and_
 from database.database import SessionLocal
 from database.crud import create_broadcast, get_or_create_user, get_all_active_users, mark_broadcast_sent
 from utils.config import ADMIN_IDS
-from database.models import Broadcast, ClientProfile
+from database.models import BroadcastMessage, ClientProfile
 
 logger = logging.getLogger(__name__)
 
@@ -146,16 +146,16 @@ async def process_broadcasts(context: ContextTypes.DEFAULT_TYPE) -> None:
 def get_pending_broadcasts(db):
     """Получает все рассылки, время отправки которых уже наступило"""
     now = datetime.now()
-    return db.query(Broadcast).filter(
+    return db.query(BroadcastMessage).filter(
         and_(
-            Broadcast.scheduled_time <= now,
-            Broadcast.is_sent == False
+            BroadcastMessage.scheduled_time <= now,
+            BroadcastMessage.is_sent == False
         )
     ).all()
 
 def mark_broadcast_sent(db, broadcast_id):
     """Помечает рассылку как отправленную"""
-    broadcast = db.query(Broadcast).get(broadcast_id)
+    broadcast = db.query(BroadcastMessage).get(broadcast_id)
     if broadcast:
         broadcast.is_sent = True
         db.commit()
