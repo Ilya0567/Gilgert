@@ -1,12 +1,14 @@
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
-from database import SessionLocal
-from models import ClientProfile, UserSession, UserInteraction, RecipeRating, DailyHealthCheck
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timedelta
-import pytz
+
+from database.database import SessionLocal
+from database.models import RecipeRating, DailyHealthCheck, ClientProfile
+from database.crud import get_user_health_stats
 from sqlalchemy import func
 from utils.config import ADMIN_ID  # Добавь свой Telegram ID в config.py
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import pytz
 
 async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler for getting user statistics"""
