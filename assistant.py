@@ -8,7 +8,8 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     MessageHandler,
-    filters
+    filters,
+    ContextTypes
 )
 import time
 from datetime import datetime, timedelta
@@ -57,6 +58,7 @@ from database.database import (
     get_or_create_session,
     end_user_session,
     log_user_interaction,
+    add_health_check,
 )
 # Импорт хендлеров из отдельных файлов
 from handlers.menu import start_menu, menu_callback, cancel
@@ -66,7 +68,7 @@ from handlers.recipes import recipes_callback
 from database.models import ClientProfile
 
 # Импорт конфигурации (TOKEN_BOT)
-from utils.config import TOKEN_BOT
+from utils.config import TOKEN_BOT, CHAT_ID
 
 # Dictionary to store active sessions
 active_sessions = {}
@@ -164,6 +166,8 @@ cancel = track_user(cancel)
 
 from stats_handler import get_stats
 
+from handlers.stats import stats_recipes, stats_health, stats_users, stats_help
+
 async def send_daily_message(context, chat_id):
     """Отправляет ежедневное сообщение пользователям."""
     # Получаем имя пользователя
@@ -222,18 +226,43 @@ def schedule_daily_message(application):
     scheduler.start()
     bot_logger.info("Daily message scheduler started.")
 
-async def handle_emoji_response(update: Update, context: CallbackContext):
-    """Обрабатывает нажатие на кнопки с эмодзи."""
+@track_user
+async def handle_emoji_response(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обрабатывает ответы пользователя на ежедневный опрос о самочувствии."""
     query = update.callback_query
     await query.answer()
-
-    # Изменяем сообщение на благодарственное
-    await query.edit_message_text(
-        text="Спасибо за ваш ответ! 😊",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔙 В главное меню", callback_data='back_to_menu')]
-        ])
-    )
+    
+    mood = query.data  # 'sad', 'neutral', или 'happy'
+    user = query.from_user
+    
+    # Сохраняем реакцию в базу данных
+    db = SessionLocal()
+    try:
+        # Получаем или создаем профиль пользователя
+        user_profile = get_or_create_user(
+            db=db,
+            telegram_id=str(user.id),
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name
+        )
+        
+        # Сохраняем реакцию
+        add_health_check(db=db, user_id=user_profile.id, mood=mood)
+        
+        # Отправляем подтверждение
+        mood_responses = {
+            'sad': 'Жаль, что вы чувствуете себя не очень. Надеюсь, завтра будет лучше! 🌅',
+            'neutral': 'Понятно. Надеюсь, завтра настроение будет лучше! ✨',
+            'happy': 'Отлично! Рад, что у вас хорошее настроение! 🌟'
+        }
+        
+        await query.edit_message_text(
+            text=mood_responses[mood]
+        )
+        
+    finally:
+        db.close()
 
 def main():
     """
@@ -249,8 +278,11 @@ def main():
     
     application = ApplicationBuilder().token(TOKEN_BOT).build()
 
-    # Add stats command handler
-    application.add_handler(CommandHandler("stats", get_stats))
+    # Добавляем обработчики команд статистики
+    application.add_handler(CommandHandler("stats_recipes", stats_recipes))
+    application.add_handler(CommandHandler("stats_health", stats_health))
+    application.add_handler(CommandHandler("stats_users", stats_users))
+    application.add_handler(CommandHandler("stats_help", stats_help))
 
     # ConversationHandler описывает сценарий общения бота с пользователем.
     bot_logger.info("Configuring conversation handler...")

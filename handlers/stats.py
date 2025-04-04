@@ -1,10 +1,12 @@
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 from database import SessionLocal
-from models import ClientProfile, UserSession, UserInteraction, RecipeRating
+from models import ClientProfile, UserSession, UserInteraction, RecipeRating, DailyHealthCheck
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timedelta
 import pytz
+from sqlalchemy import func
+from utils.config import ADMIN_ID  # Добавь свой Telegram ID в config.py
 
 async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler for getting user statistics"""
@@ -85,6 +87,157 @@ def schedule_daily_message(application):
         context=YOUR_CHAT_ID  # Замените на ID чата пользователя
     )
     scheduler.start()
+
+def is_admin(user_id: int) -> bool:
+    """Проверяет, является ли пользователь админом"""
+    return str(user_id) == str(ADMIN_ID)
+
+async def check_admin(update: Update) -> bool:
+    """Проверяет права админа и отправляет сообщение если нет доступа"""
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("⛔ У вас нет доступа к этой команде.")
+        return False
+    return True
+
+async def stats_recipes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Статистика по рецептам"""
+    if not await check_admin(update):
+        return
+
+    db = SessionLocal()
+    try:
+        # Получаем статистику по рецептам
+        avg_ratings = (
+            db.query(
+                RecipeRating.recipe_type,
+                func.avg(RecipeRating.rating).label('avg_rating'),
+                func.count(RecipeRating.id).label('total_ratings')
+            )
+            .group_by(RecipeRating.recipe_type)
+            .all()
+        )
+
+        stats_message = "📊 Статистика рецептов:\n\n"
+        
+        type_names = {
+            'breakfast': 'Завтраки',
+            'lunch': 'Обеды',
+            'poldnik': 'Полдники',
+            'drink': 'Напитки'
+        }
+        
+        for recipe_type, avg_rating, total in avg_ratings:
+            display_name = type_names.get(recipe_type, recipe_type)
+            stats_message += f"{display_name}:\n"
+            stats_message += f"⭐ Средняя оценка: {avg_rating:.1f}\n"
+            stats_message += f"📝 Всего оценок: {total}\n\n"
+
+        if not avg_ratings:
+            stats_message = "Пока нет оценок рецептов."
+
+        await update.message.reply_text(stats_message)
+
+    finally:
+        db.close()
+
+async def stats_health(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Статистика по настроению пользователей"""
+    if not await check_admin(update):
+        return
+
+    db = SessionLocal()
+    try:
+        # Получаем статистику за последние 30 дней
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        
+        # Общая статистика по настроению
+        mood_stats = (
+            db.query(
+                DailyHealthCheck.mood,
+                func.count(DailyHealthCheck.id).label('count')
+            )
+            .filter(DailyHealthCheck.timestamp >= thirty_days_ago)
+            .group_by(DailyHealthCheck.mood)
+            .all()
+        )
+
+        # Количество активных пользователей
+        active_users = (
+            db.query(func.count(func.distinct(DailyHealthCheck.user_id)))
+            .filter(DailyHealthCheck.timestamp >= thirty_days_ago)
+            .scalar()
+        )
+
+        stats_message = "🎭 Статистика настроения (за 30 дней):\n\n"
+        
+        total_responses = sum(count for _, count in mood_stats)
+        
+        mood_names = {
+            'happy': '😊 Хорошее',
+            'neutral': '😐 Нейтральное',
+            'sad': '😢 Грустное'
+        }
+        
+        for mood, count in mood_stats:
+            percentage = (count / total_responses * 100) if total_responses > 0 else 0
+            stats_message += f"{mood_names.get(mood, mood)}:\n"
+            stats_message += f"Количество: {count} ({percentage:.1f}%)\n\n"
+        
+        stats_message += f"👥 Активных пользователей: {active_users}\n"
+        stats_message += f"📝 Всего ответов: {total_responses}"
+
+        await update.message.reply_text(stats_message)
+
+    finally:
+        db.close()
+
+async def stats_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Статистика по пользователям"""
+    if not await check_admin(update):
+        return
+
+    db = SessionLocal()
+    try:
+        # Общее количество пользователей
+        total_users = db.query(func.count(ClientProfile.id)).scalar()
+        
+        # Активные пользователи за последние 7 дней
+        week_ago = datetime.now() - timedelta(days=7)
+        active_users_week = (
+            db.query(func.count(func.distinct(ClientProfile.id)))
+            .filter(ClientProfile.last_interaction >= week_ago)
+            .scalar()
+        )
+
+        # Новые пользователи за последние 7 дней
+        new_users_week = (
+            db.query(func.count(ClientProfile.id))
+            .filter(ClientProfile.created_at >= week_ago)
+            .scalar()
+        )
+
+        stats_message = "👥 Статистика пользователей:\n\n"
+        stats_message += f"Всего пользователей: {total_users}\n"
+        stats_message += f"Активных за неделю: {active_users_week}\n"
+        stats_message += f"Новых за неделю: {new_users_week}\n"
+
+        await update.message.reply_text(stats_message)
+
+    finally:
+        db.close()
+
+async def stats_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает список доступных команд статистики"""
+    if not await check_admin(update):
+        return
+
+    help_message = "📊 Доступные команды статистики:\n\n"
+    help_message += "/stats_recipes - Статистика по рецептам\n"
+    help_message += "/stats_health - Статистика настроения\n"
+    help_message += "/stats_users - Статистика пользователей\n"
+    help_message += "/stats_help - Это сообщение"
+
+    await update.message.reply_text(help_message)
 
 def main():
     bot_logger.info("Starting bot application...")

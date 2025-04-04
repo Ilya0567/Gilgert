@@ -9,3 +9,6 @@ KEY = "sk-proj-z6XIQ02Y3px8PShNSFME3lntU9qBOhE-hRRiK1u-vh_kpOaK30435FnzU3HR2nOJt
 TOKEN_BOT = "7497408437:AAHcpnlNUDAu2CpW1khxf5keiBmxXRWCjAY"
 CHAT_ID = "-1002051079352"
 # CHAT_ID = '669201758'
+
+# Добавляем ID администратора
+ADMIN_ID = "669201758"  # Замени на свой ID

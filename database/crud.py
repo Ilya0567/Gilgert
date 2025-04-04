@@ -1,8 +1,9 @@
 # crud.py
 
 from sqlalchemy.orm import Session
-from .models import ClientProfile, RecipeRating
+from .models import ClientProfile, RecipeRating, DailyHealthCheck
 import logging
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -91,4 +92,60 @@ def get_recipe_average_rating(db: Session, recipe_type: str, recipe_name: str) -
     ratings = get_recipe_ratings(db, recipe_type, recipe_name)
     if not ratings:
         return 0.0
-    return sum(r.rating for r in ratings) / len(ratings) 
+    return sum(r.rating for r in ratings) / len(ratings)
+
+def add_health_check(
+    db: Session,
+    user_id: int,
+    mood: str
+) -> DailyHealthCheck:
+    """
+    Add a new health check response to the database.
+    Args:
+        db: Database session
+        user_id: ID of the user
+        mood: One of 'sad', 'neutral', 'happy'
+    """
+    if mood not in ['sad', 'neutral', 'happy']:
+        raise ValueError("Mood must be one of: sad, neutral, happy")
+
+    health_check = DailyHealthCheck(
+        user_id=user_id,
+        mood=mood
+    )
+    
+    db.add(health_check)
+    db.commit()
+    db.refresh(health_check)
+    
+    logger.info(f"Added health check for user {user_id}: {mood}")
+    return health_check
+
+def get_user_health_stats(db: Session, user_id: int, days: int = 30) -> dict:
+    """
+    Get health check statistics for a user over the last N days.
+    """
+    cutoff_date = datetime.now() - timedelta(days=days)
+    
+    # Get all health checks for this period
+    checks = db.query(DailyHealthCheck).filter(
+        DailyHealthCheck.user_id == user_id,
+        DailyHealthCheck.timestamp >= cutoff_date
+    ).all()
+    
+    # Count moods
+    stats = {
+        'total_checks': len(checks),
+        'happy': sum(1 for c in checks if c.mood == 'happy'),
+        'neutral': sum(1 for c in checks if c.mood == 'neutral'),
+        'sad': sum(1 for c in checks if c.mood == 'sad'),
+        'days_tracked': days
+    }
+    
+    # Calculate percentages if there are any checks
+    if stats['total_checks'] > 0:
+        stats['happy_percent'] = (stats['happy'] / stats['total_checks']) * 100
+        stats['neutral_percent'] = (stats['neutral'] / stats['total_checks']) * 100
+        stats['sad_percent'] = (stats['sad'] / stats['total_checks']) * 100
+    
+    return stats 

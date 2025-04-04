@@ -19,6 +19,7 @@ class ActionType(enum.Enum):
     RECIPE_VIEW = "recipe_view"
     CLICK_RATE_BUTTON = "click_rate_button"
     SUBMIT_RATING = "submit_rating"
+    HEALTH_CHECK = "health_check"  # New action type for health checks
 
 class ClientProfile(Base):
     __tablename__ = "client_profiles"
@@ -98,6 +99,22 @@ class RecipeRating(Base):
         return f"<RecipeRating(user_id={self.user_id}, recipe='{self.recipe_name}', rating={self.rating})>"
 
 models_logger.info("RecipeRating model defined")
+
+class DailyHealthCheck(Base):
+    __tablename__ = "daily_health_checks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("client_profiles.id"), nullable=False)
+    mood = Column(String, nullable=False)  # 'sad', 'neutral', 'happy'
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationship to user
+    user = relationship("ClientProfile")
+
+    def __repr__(self):
+        return f"<DailyHealthCheck(user_id={self.user_id}, mood='{self.mood}', timestamp={self.timestamp})>"
+
+models_logger.info("DailyHealthCheck model defined")
 
 # Ensure all models are registered with Base metadata if needed elsewhere
 # For example, if you have a Base = declarative_base() line earlier, ensure this model uses it.
