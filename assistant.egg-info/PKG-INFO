@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: assistant
+Version: 0.1
+Requires-Dist: python-telegram-bot
+Requires-Dist: pandas
+Requires-Dist: natasha
+Requires-Dist: openai
+Requires-Dist: sqlalchemy
+Requires-Dist: flask
+Requires-Dist: apscheduler
+Dynamic: requires-dist

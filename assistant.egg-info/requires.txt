@@ -1,0 +1,7 @@
+python-telegram-bot
+pandas
+natasha
+openai
+sqlalchemy
+flask
+apscheduler

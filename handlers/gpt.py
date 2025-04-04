@@ -3,9 +3,9 @@ import logging
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 
-from utils.states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
-from utils import gpt_35  # ваш файл с ChatGPTClient
-from utils.config import KEY
+from ..utils.states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
+from ..utils import gpt_35  # ваш файл с ChatGPTClient
+from ..utils.config import KEY
 
 GPT_CLIENT = gpt_35.ChatGPTClient(api_key=KEY)
 
