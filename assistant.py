@@ -58,8 +58,8 @@ from database.database import (
     get_or_create_session,
     end_user_session,
     log_user_interaction,
-    add_health_check,
 )
+from database.crud import add_health_check  # Moved this import here
 # Импорт хендлеров из отдельных файлов
 from handlers.menu import start_menu, menu_callback, cancel
 from handlers.gpt import gpt_user_message
