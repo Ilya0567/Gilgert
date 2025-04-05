@@ -147,7 +147,7 @@ async def process_broadcasts(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def get_pending_broadcasts(db):
     """Получает все рассылки, время отправки которых уже наступило"""
-    now = datetime.now()
+    now = datetime.now(pytz.timezone('Europe/Moscow'))
     return db.query(BroadcastMessage).filter(
         and_(
             BroadcastMessage.scheduled_time <= now,
@@ -160,7 +160,7 @@ def mark_broadcast_sent(db, broadcast_id):
     broadcast = db.query(BroadcastMessage).get(broadcast_id)
     if broadcast:
         broadcast.sent = True
-        broadcast.sent_at = datetime.now()
+        broadcast.sent_at = datetime.now(pytz.timezone('Europe/Moscow'))
         db.commit()
 
 def get_active_users(db):
