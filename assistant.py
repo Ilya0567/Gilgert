@@ -293,6 +293,18 @@ def main():
     # Добавляем обработчик рассылок
     application.add_handler(get_broadcast_handler())
 
+    # Добавляем обработчики команд для таблиц
+    from handlers.tables import (
+        table_users, table_sessions, table_interactions,
+        table_ratings, table_health, table_broadcasts
+    )
+    application.add_handler(CommandHandler("table_users", table_users))
+    application.add_handler(CommandHandler("table_sessions", table_sessions))
+    application.add_handler(CommandHandler("table_interactions", table_interactions))
+    application.add_handler(CommandHandler("table_ratings", table_ratings))
+    application.add_handler(CommandHandler("table_health", table_health))
+    application.add_handler(CommandHandler("table_broadcasts", table_broadcasts))
+
     # ConversationHandler описывает сценарий общения бота с пользователем.
     bot_logger.info("Configuring conversation handler...")
     conv_handler = ConversationHandler(
