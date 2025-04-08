@@ -5,7 +5,7 @@ from telegram.ext import ContextTypes
 
 from utils.states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 from utils import gpt_35
-from utils.config import KEY
+from utils.config import OPENAI_API_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         # Создаем клиента GPT с сохраненной историей
-        gpt_client = gpt_35.ChatGPTClient(api_key=KEY)
+        gpt_client = gpt_35.ChatGPTClient(api_key=OPENAI_API_KEY)
         
         # Получаем ответ от GPT с учетом истории
         gpt_response = gpt_client.generate_response(

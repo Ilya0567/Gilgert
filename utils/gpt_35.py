@@ -1,8 +1,7 @@
 from openai import OpenAI
+from utils.config import OPENAI_API_KEY
 
-KEY = "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"
-
-client = OpenAI(api_key=KEY)
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Системное сообщение для задания контекста работы модели
 system_message = {
@@ -51,11 +50,11 @@ system_message = {
 }
 
 class ChatGPTClient:
-    def __init__(self, api_key, model="gpt-3.5-turbo", temperature=0.7):
+    def __init__(self, api_key=OPENAI_API_KEY, model="gpt-3.5-turbo", temperature=0.7):
         """
         Инициализация клиента ChatGPT.
 
-        :param api_key: API-ключ для доступа к OpenAI
+        :param api_key: API-ключ для доступа к OpenAI (по умолчанию из конфига)
         :param model: Модель для использования (по умолчанию "gpt-3.5-turbo")
         :param temperature: Креативность модели (по умолчанию 0.7)
         """
