@@ -1,5 +1,7 @@
 import logging
 import os
+import signal
+import sys
 from logging.handlers import RotatingFileHandler
 from functools import wraps
 from telegram.ext import (
@@ -9,7 +11,8 @@ from telegram.ext import (
     CallbackQueryHandler,
     MessageHandler,
     filters,
-    ContextTypes
+    ContextTypes,
+    PicklePersistence
 )
 import time
 from datetime import datetime, timedelta
@@ -225,6 +228,9 @@ def schedule_daily_message(application):
     finally:
         db.close()
 
+    # Сохраняем scheduler как атрибут application для возможности остановки
+    application.scheduler = scheduler
+    
     scheduler.start()
     bot_logger.info("Daily message scheduler started.")
 
@@ -280,7 +286,40 @@ def main():
     init_db()
     bot_logger.info("Database initialized successfully")
     
-    application = ApplicationBuilder().token(TOKEN_BOT).build()
+    # Создаем объект персистентности для сохранения данных между перезапусками
+    persistence_path = 'persistence/data'
+    os.makedirs('persistence', exist_ok=True)
+    
+    bot_logger.info("Setting up persistence...")
+    persistence = PicklePersistence(
+        filepath=persistence_path,
+        store_data={"user_data": True, "chat_data": True, "bot_data": True, "callback_data": True, "conversations": True},
+        single_file=True,
+        on_flush=False,
+        update_interval=60  # Сохраняем каждые 60 секунд
+    )
+    
+    application = ApplicationBuilder().token(TOKEN_BOT).persistence(persistence).build()
+
+    # Обработчик сигналов для плавного завершения и сохранения состояния
+    def signal_handler(sig, frame):
+        bot_logger.info(f"Received signal {sig}, shutting down gracefully...")
+        # Остановить планировщик задач
+        if hasattr(application, 'scheduler') and application.scheduler:
+            application.scheduler.shutdown()
+        # Завершить работу бота
+        application.stop()
+        # Сохранить состояние
+        if persistence:
+            bot_logger.info("Saving state to disk before exit...")
+        sys.exit(0)
+    
+    # Регистрируем обработчики сигналов
+    signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
+    signal.signal(signal.SIGTERM, signal_handler)  # kill
+    
+    if hasattr(signal, 'SIGBREAK'):  # Windows
+        signal.signal(signal.SIGBREAK, signal_handler)
 
     # Добавляем обработчик команды админа
     application.add_handler(CommandHandler("admin", admin_commands))
