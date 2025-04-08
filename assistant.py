@@ -177,21 +177,20 @@ async def send_daily_message(context, chat_id):
     user = await context.bot.get_chat(chat_id)
     user_name = user.first_name
 
-    # Логируем отправку сообщения
-    bot_logger.info(f"Sending daily message to user: {user_name} (ID: {chat_id})")
-
-    # Создаем кнопки с эмодзи
-    keyboard = [
-        [InlineKeyboardButton("😢", callback_data='sad')],
-        [InlineKeyboardButton("😐", callback_data='neutral')],
-        [InlineKeyboardButton("😊", callback_data='happy')]
-    ]
+    # Создаем кнопки с эмодзи в одну линию
+    keyboard = [[
+        InlineKeyboardButton("😢", callback_data='very_sad'),
+        InlineKeyboardButton("😕", callback_data='sad'),
+        InlineKeyboardButton("😐", callback_data='neutral'),
+        InlineKeyboardButton("🙂", callback_data='good'),
+        InlineKeyboardButton("😊", callback_data='very_good')
+    ]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     # Отправляем сообщение
     await context.bot.send_message(
         chat_id=chat_id,
-        text=f"Привет, {user_name}! Как ты себя чувствуешь, как настроение? Оцени своё состояние.",
+        text=f"Привет, {user_name}! Как ты себя чувствуешь сегодня? Оцени своё состояние.",
         reply_markup=reply_markup
     )
 
@@ -235,7 +234,7 @@ async def handle_emoji_response(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
     
-    mood = query.data  # 'sad', 'neutral', или 'happy'
+    mood = query.data
     user = query.from_user
     
     # Сохраняем реакцию в базу данных
@@ -255,9 +254,11 @@ async def handle_emoji_response(update: Update, context: ContextTypes.DEFAULT_TY
         
         # Отправляем подтверждение
         mood_responses = {
+            'very_sad': 'Мне очень жаль, что вы чувствуете себя плохо. Не стесняйтесь обратиться за помощью, если нужно! 🌅',
             'sad': 'Жаль, что вы чувствуете себя не очень. Надеюсь, завтра будет лучше! 🌅',
             'neutral': 'Понятно. Надеюсь, завтра настроение будет лучше! ✨',
-            'happy': 'Отлично! Рад, что у вас хорошее настроение! 🌟'
+            'good': 'Отлично! Продолжайте в том же духе! 🌟',
+            'very_good': 'Замечательно! Очень рад, что у вас всё отлично! 🌟'
         }
         
         await query.edit_message_text(
@@ -332,7 +333,7 @@ def main():
     application.add_handler(conv_handler)
 
     # Добавляем обработчик для нажатий на эмодзи
-    application.add_handler(CallbackQueryHandler(handle_emoji_response, pattern="^(sad|neutral|happy)$"))
+    application.add_handler(CallbackQueryHandler(handle_emoji_response, pattern="^(very_sad|sad|neutral|good|very_good)$"))
 
     # Настраиваем проверку рассылок каждую минуту
     job_queue = application.job_queue
