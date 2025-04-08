@@ -159,7 +159,7 @@ def track_user(func):
 # Apply the track_user decorator to all handler functions
 start_menu = track_user(start_menu)
 menu_callback = track_user(menu_callback)
-gpt_user_message = track_user(gpt_user_message)
+handle_message = track_user(handle_message)
 product_user_message = track_user(product_user_message)
 recipes_callback = track_user(recipes_callback)
 cancel = track_user(cancel)
