@@ -446,34 +446,35 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # --- New handlers for rating ---
 
     elif data == "rate_recipe":
-        # User clicked "Оценить"
-        # Assuming track_user logs CLICK_RATE_BUTTON based on this data
-        # or needs explicit logging here if track_user isn't sufficient.
-        # Example explicit logging:
-        # db = SessionLocal()
-        # try:
-        #     user_profile = get_or_create_user(db, user.id, ...) # Get user profile
-        #     log_user_action(db, user_profile.id, ActionType.CLICK_RATE_BUTTON, details="Clicked rate button")
-        # finally:
-        #     db.close()
-
+        # Store the callback data for returning to the recipe
+        recipe_type = context.user_data.get('current_recipe_type')
+        recipe_name = context.user_data.get('current_recipe_name')
+        current_category = context.user_data.get('current_category')
+        
+        # Save the return path based on recipe type
+        if recipe_type == 'lunch':
+            context.user_data['return_to_recipe'] = f"category_{current_category}"
+        elif recipe_type == 'breakfast':
+            context.user_data['return_to_recipe'] = f"bcat_{context.user_data.get('bf_cat')}"
+        elif recipe_type == 'poldnik':
+            context.user_data['return_to_recipe'] = f"pcat_{context.user_data.get('pd_cat')}"
+        elif recipe_type == 'drink':
+            context.user_data['return_to_recipe'] = f"drinks_cat_{context.user_data.get('drinks_current_cat')}"
+        
         # Show rating buttons
         rating_buttons = [
             InlineKeyboardButton(str(i), callback_data=f"rating_{i}") for i in range(1, 6)
         ]
-        # Need recipe details again or just modify the keyboard? Modify keyboard is better.
-        current_recipe_name = context.user_data.get('current_recipe_name', 'этот рецепт')
 
         await query.edit_message_text(
-            text=f"👍 Отличный выбор! Оцените \"{current_recipe_name}\" от 1 до 5.\n"
+            text=f"👍 Отличный выбор! Оцените \"{recipe_name}\" от 1 до 5.\n"
                  f"Ваша оценка поможет нам улучшить рекомендации! 😉",
             reply_markup=InlineKeyboardMarkup([
                 rating_buttons,
-                # Option to go back without rating? Maybe add a Cancel or Back button here.
-                # For now, only rating options.
+                [InlineKeyboardButton("Отмена", callback_data=context.user_data['return_to_recipe'])]
             ])
         )
-        return RECIPES # Stay in the recipes state
+        return RECIPES
 
     elif data.startswith("rating_"):
         # User submitted a rating
@@ -513,21 +514,13 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             logger.info(f"User {telegram_id} rated '{recipe_name}' ({recipe_type}) as {rating_value}")
 
-            # Assuming track_user logs SUBMIT_RATING based on this data
-            # or needs explicit logging here:
-            # log_user_action(db, user_profile.id, ActionType.SUBMIT_RATING, details=f"Rated {recipe_name} as {rating_value}")
-
-            # Check if the message text or keyboard needs to be updated
-            current_text = query.message.text
-            new_text = f"⭐ Спасибо! Вы оценили \"{recipe_name}\" на {rating_value}. Это очень поможет нам улучшить рекомендации!"
-            if current_text != new_text:
-                await query.edit_message_text(
-                    text=new_text,
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("Назад", callback_data=context.user_data.get('last_callback_data', 'healthy_recipes'))],
-                        [InlineKeyboardButton("Главное меню", callback_data="start")]
-                    ])
-                )
+            await query.edit_message_text(
+                text=f"⭐ Спасибо! Вы оценили \"{recipe_name}\" на {rating_value}. Это очень поможет нам улучшить рекомендации!",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Назад", callback_data=context.user_data.get('return_to_recipe'))],
+                    [InlineKeyboardButton("Главное меню", callback_data="start")]
+                ])
+            )
 
         except Exception as e:
             logger.error(f"Failed to save rating for user {telegram_id}, recipe {recipe_name}: {e}")
