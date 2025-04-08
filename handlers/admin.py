@@ -26,7 +26,7 @@ async def admin_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     commands_list = (
-        "👑 *Команды администратора:*\n\n"
+        "👑 *Команды администратора бота:*\n\n"
         "*Статистика:*\n"
         "📊 /stats\\_recipes \\- статистика по рецептам\n"
         "😊 /stats\\_health \\- статистика по настроению\n"
