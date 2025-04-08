@@ -15,6 +15,7 @@ from meals import poldnik      # ваш класс PoldnikGenerator
 from database.database import SessionLocal # Assuming SessionLocal is here
 from database.crud import add_recipe_rating # Assuming function to add rating is here
 from database.models import ActionType # Import ActionType for tracking
+from handlers.menu import start_menu
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,6 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Если пользователь нажал "start" или "back_to_menu"
     if data in ('start', 'back_to_menu'):
-        from handlers_menu import start_menu
         return await start_menu(update, context)
 
     # ---------- Завтраки ----------
@@ -544,7 +544,6 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Fallback or error message
     await query.answer("Неизвестная команда.", show_alert=True)
     # Go back to menu?
-    from handlers_menu import start_menu # Import if not already imported
     return await start_menu(update, context) # Safest fallback?
 
 # Ensure the track_user decorator is applied if it handles action logging:
