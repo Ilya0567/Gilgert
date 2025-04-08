@@ -25,6 +25,9 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     user = query.from_user # Get user info
 
+    # Store the current callback data before processing
+    context.user_data['last_callback_data'] = data
+
     # Если пользователь нажал "start" или "back_to_menu"
     if data in ('start', 'back_to_menu'):
         return await start_menu(update, context)
@@ -518,7 +521,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text=f"⭐ Спасибо! Вы оценили \"{recipe_name}\" на {rating_value}."
                      f" Это очень поможет!",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Назад", callback_data=context.user_data.get('last_recipe_callback', 'healthy_recipes'))],
+                    [InlineKeyboardButton("Назад", callback_data=context.user_data.get('last_callback_data', 'healthy_recipes'))],
                     [InlineKeyboardButton("Главное меню", callback_data="start")]
                 ])
             )
