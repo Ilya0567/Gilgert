@@ -24,13 +24,14 @@ class ChatGPTClient:
         self.temperature = temperature
         self.max_tokens = max_tokens
 
-    def generate_response(self, user_message: str, system_message: dict = None) -> str:
+    def generate_response(self, user_message: str, system_message: dict = None, message_history: list = None) -> str:
         """
         Генерирует ответ на сообщение пользователя
         
         Args:
             user_message (str): Сообщение пользователя
             system_message (dict, optional): Системное сообщение. По умолчанию используется SYSTEM_MESSAGE.
+            message_history (list, optional): История сообщений для контекста. По умолчанию None.
             
         Returns:
             str: Ответ модели
@@ -46,6 +47,10 @@ class ChatGPTClient:
                 messages.append({"role": "system", "content": system_message})
             else:
                 messages.append(system_message)
+                
+        # Добавляем историю сообщений если она есть
+        if message_history:
+            messages.extend(message_history)
                 
         # Добавляем сообщение пользователя
         messages.append({"role": "user", "content": user_message})
