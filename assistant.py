@@ -62,7 +62,7 @@ from database.database import (
 from database.crud import add_health_check  # Moved this import here
 # Импорт хендлеров из отдельных файлов
 from handlers.menu import start_menu, menu_callback, cancel
-from handlers.gpt import gpt_user_message
+from handlers.gpt import handle_message
 from handlers.product import product_user_message
 from handlers.recipes import recipes_callback  
 from database.models import ClientProfile
@@ -312,11 +312,8 @@ def main():
         entry_points=[CommandHandler("start", start_menu)],
         states={
             MENU: [
-                CallbackQueryHandler(menu_callback, pattern="^(about|ask_question|check_product|healthy_recipes|back_to_menu|...)$")
-            ],
-            GPT_QUESTION: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, gpt_user_message),
-                CallbackQueryHandler(menu_callback, pattern="^back_to_menu$")
+                CallbackQueryHandler(menu_callback, pattern="^(about|check_product|healthy_recipes|back_to_menu)$"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)  # Обработка всех текстовых сообщений через GPT
             ],
             CHECK_PRODUCT: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, product_user_message),

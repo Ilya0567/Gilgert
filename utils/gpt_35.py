@@ -63,17 +63,23 @@ class ChatGPTClient:
         self.model = model
         self.temperature = temperature
 
-    def generate_response(self, user_message, system_message=system_message, stream=True, line_width=80):
+    def generate_response(self, user_message, message_history=None, stream=True):
         """
-        Генерация ответа от ChatGPT с потоковой передачей.
+        Генерация ответа от ChatGPT с учетом истории сообщений.
 
-        :param system_message: Системное сообщение для задания контекста работы модели
-        :param user_message: Сообщение пользователя
-        :param stream: Использовать ли потоковую передачу (по умолчанию True)
-        :param line_width: Длина строки для вывода текста (по умолчанию 80 символов)
+        :param user_message: Текущее сообщение пользователя
+        :param message_history: История сообщений (список словарей с ключами role и content)
+        :param stream: Использовать ли потоковую передачу
         :return: Ответ модели в виде строки
         """
-        messages = [system_message] + [{"role": "user", "content": user_message}]
+        # Формируем сообщения для отправки
+        messages = [system_message]
+        
+        # Добавляем историю сообщений, если она есть
+        if message_history:
+            messages.extend(message_history)
+        else:
+            messages.append({"role": "user", "content": user_message})
 
         response_stream = self.client.chat.completions.create(
             model=self.model,
@@ -87,11 +93,6 @@ class ChatGPTClient:
         for chunk in response_stream:
             if chunk.choices[0].delta.content is not None:
                 text += chunk.choices[0].delta.content
-
-        # Вывод текста с переносами
-        # formatted_response = ""
-        # for i in range(0, len(text), line_width):
-        #     formatted_response += text[i:i + line_width] + "\n"
 
         return text
 
