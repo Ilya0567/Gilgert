@@ -517,17 +517,17 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # or needs explicit logging here:
             # log_user_action(db, user_profile.id, ActionType.SUBMIT_RATING, details=f"Rated {recipe_name} as {rating_value}")
 
-            # Go back to the recipe view with a confirmation message?
-            # Need the callback data for the previous step (e.g., "bcat_...", "category_...")
-            # For simplicity, just show a thank you message and main recipe buttons
-            await query.edit_message_text(
-                text=f"⭐ Спасибо! Вы оценили \"{recipe_name}\" на {rating_value}."
-                     f" Это очень поможет!",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Назад", callback_data=context.user_data.get('last_callback_data', 'healthy_recipes'))],
-                    [InlineKeyboardButton("Главное меню", callback_data="start")]
-                ])
-            )
+            # Check if the message text or keyboard needs to be updated
+            current_text = query.message.text
+            new_text = f"⭐ Спасибо! Вы оценили \"{recipe_name}\" на {rating_value}. Это очень поможет нам улучшить рекомендации!"
+            if current_text != new_text:
+                await query.edit_message_text(
+                    text=new_text,
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("Назад", callback_data=context.user_data.get('last_callback_data', 'healthy_recipes'))],
+                        [InlineKeyboardButton("Главное меню", callback_data="start")]
+                    ])
+                )
 
         except Exception as e:
             logger.error(f"Failed to save rating for user {telegram_id}, recipe {recipe_name}: {e}")
