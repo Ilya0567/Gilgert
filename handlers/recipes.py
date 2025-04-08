@@ -518,12 +518,8 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text=f"⭐ Спасибо! Вы оценили \"{recipe_name}\" на {rating_value}."
                      f" Это очень поможет!",
                 reply_markup=InlineKeyboardMarkup([
-                    # We lost the context of the *specific* back button (e.g. "bcat_Каша")
-                    # Maybe just offer back to the main recipe categories?
-                     [InlineKeyboardButton("К рецептам", callback_data="healthy_recipes")],
-                     [InlineKeyboardButton("Главное меню", callback_data="start")]
-                     # Or try to reconstruct the back button if context allows, e.g.:
-                     # [InlineKeyboardButton("Назад", callback_data=context.user_data.get('last_recipe_list_callback', 'healthy_recipes'))]
+                    [InlineKeyboardButton("К рецептам", callback_data="healthy_recipes")],
+                    [InlineKeyboardButton("Главное меню", callback_data="start")]
                 ])
             )
 
