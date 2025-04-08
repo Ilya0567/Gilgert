@@ -17,7 +17,7 @@ SYSTEM_MESSAGE = """Ты дружелюбный и позитивный асси
 - Всегда сохраняй позитивный и поддерживающий тон"""
 
 class ChatGPTClient:
-    def __init__(self, api_key=OPENAI_API_KEY, model="gpt-4o-mini-search-preview", temperature=0.9, max_tokens=300):
+    def __init__(self, api_key=OPENAI_API_KEY, model="gpt-4o-mini", temperature=0.9, max_tokens=300):
         """
         Инициализация клиента ChatGPT.
 
