@@ -25,6 +25,9 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     user = query.from_user # Get user info
 
+    # Log the callback data for debugging
+    logger.debug(f"Callback data received: {data}")
+
     # Store the current callback data before processing
     context.user_data['last_callback_data'] = data
 
