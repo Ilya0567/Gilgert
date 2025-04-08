@@ -518,7 +518,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text=f"⭐ Спасибо! Вы оценили \"{recipe_name}\" на {rating_value}."
                      f" Это очень поможет!",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("К рецептам", callback_data="healthy_recipes")],
+                    [InlineKeyboardButton("Назад", callback_data=context.user_data.get('last_recipe_callback', 'healthy_recipes'))],
                     [InlineKeyboardButton("Главное меню", callback_data="start")]
                 ])
             )
