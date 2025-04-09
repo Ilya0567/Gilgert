@@ -170,9 +170,7 @@ handle_message = track_user(handle_message)
 product_user_message = track_user(product_user_message)
 recipes_callback = track_user(recipes_callback)
 cancel = track_user(cancel)
-# Apply tracking to universal handlers
-universal_message_handler = track_user(universal_message_handler)
-universal_command_handler = track_user(universal_command_handler)
+# universal handlers will be decorated after they are defined
 
 from stats_handler import get_stats
 
@@ -433,6 +431,11 @@ def main():
         # Настраиваем ConversationHandler с нашими универсальными обработчиками
         # в качестве fallbacks, чтобы они обрабатывали все сообщения,
         # которые не попадают под стандартные состояния
+        
+        # Применяем декоратор track_user к универсальным обработчикам
+        universal_message_handler = track_user(universal_message_handler)
+        universal_command_handler = track_user(universal_command_handler)
+        
         bot_logger.info("Configuring conversation handler...")
         conv_handler = ConversationHandler(
             entry_points=[
