@@ -29,7 +29,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.debug(f"Callback data received: {data}")
     
     # Инициализируем структуры данных, если они отсутствуют
-    if 'user_data' not in context:
+    if not hasattr(context, 'user_data'):
         context.user_data = {}
     if 'state' not in context.user_data:
         context.user_data['state'] = MENU
