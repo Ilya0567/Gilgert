@@ -295,20 +295,42 @@ async def handle_emoji_response(update: Update, context: ContextTypes.DEFAULT_TY
 
 def main():
     """Основная функция запуска бота."""
+    
+    # Устанавливаем обработчики сигналов для безопасного завершения
+    def handle_exit(signum, frame):
+        bot_logger.info(f"Получен сигнал {signum}, завершаем работу")
+        # Ждем 5 секунд перед выходом, чтобы избежать немедленного перезапуска
+        time.sleep(5)
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, handle_exit)
+    signal.signal(signal.SIGINT, handle_exit)
+    
     try:
-        # Создаем объект персистентности
-        persistence = PicklePersistence(
-            filepath="bot_data",
-            store_data=PersistenceInput(
-                bot_data=True,
-                chat_data=True,
-                user_data=True,
-                callback_data=True,
-            ),
-        )
+        db_path = "test.db"
+        log_messages = True
+        application_context = None  # переменная для хранения контекста приложения
+        
+        # Указываем Telegram боту ждать несколько секунд между опросами серверов
+        defaults = Defaults(tzinfo=pytz.timezone('Europe/Moscow'))
+        
+        # Настраиваем сохранение состояния бота
+        persistence = PicklePersistence(filepath="bot_persistence")
         
         # Инициализируем приложение с токеном и персистентностью
-        application = ApplicationBuilder().token(TOKEN_BOT).persistence(persistence).build()
+        application = ApplicationBuilder().token(TOKEN_BOT).persistence(persistence).defaults(defaults)
+        
+        # Изменяем параметры обновления для предотвращения зацикливания
+        application = application.get_updates_http_version("1.1")
+        application = application.get_updates_pool_timeout(10.0)
+        application = application.get_updates_read_timeout(15.0)
+        application = application.get_updates_write_timeout(15.0)
+        application = application.get_updates_connect_timeout(10.0)
+        application = application.http_version("1.1")
+        application = application.connection_pool_size(8)
+        application = application.rate_limiter(None)  # Отключаем лимитер скорости
+        
+        application = application.build()
         bot_logger.info("Создание планировщика задач")
         
         try:
@@ -412,6 +434,24 @@ def main():
             """Универсальный обработчик для всех текстовых сообщений"""
             bot_logger.info(f"Universal message handler called for user {update.effective_user.id}")
             
+            # Защита от зацикливания
+            message_id = update.message.message_id if update.message else 0
+            user_id = update.effective_user.id
+            
+            # Сохраняем последнее обработанное сообщение и его время
+            last_message_key = f"last_message_{user_id}"
+            last_message = context.bot_data.get(last_message_key, {"id": 0, "time": 0})
+            
+            current_time = time.time()
+            
+            # Если это то же сообщение или слишком быстрая серия сообщений (менее секунды)
+            if message_id == last_message["id"] or (current_time - last_message["time"] < 1.0 and message_id - last_message["id"] < 5):
+                bot_logger.warning(f"Возможное зацикливание для пользователя {user_id}, пропускаем сообщение {message_id}")
+                return MENU
+            
+            # Обновляем информацию о последнем сообщении
+            context.bot_data[last_message_key] = {"id": message_id, "time": current_time}
+            
             # Инициализируем контекст, если он не существует
             if not hasattr(context, 'user_data'):
                 context.user_data = {}
@@ -458,6 +498,24 @@ def main():
         async def universal_command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """Универсальный обработчик для всех команд, кроме /start"""
             bot_logger.info(f"Universal command handler called for user {update.effective_user.id}: {update.message.text}")
+            
+            # Защита от зацикливания
+            command_id = update.message.message_id if update.message else 0
+            user_id = update.effective_user.id
+            
+            # Сохраняем последнюю обработанную команду и её время
+            last_command_key = f"last_command_{user_id}"
+            last_command = context.bot_data.get(last_command_key, {"id": 0, "time": 0})
+            
+            current_time = time.time()
+            
+            # Если это та же команда или слишком быстрая серия команд
+            if command_id == last_command["id"] or (current_time - last_command["time"] < 2.0):
+                bot_logger.warning(f"Возможное зацикливание команд для пользователя {user_id}, пропускаем сообщение {command_id}")
+                return MENU
+            
+            # Обновляем информацию о последней команде
+            context.bot_data[last_command_key] = {"id": command_id, "time": current_time}
             
             # Инициализируем контекст, если он не существует
             if not hasattr(context, 'user_data'):
@@ -537,7 +595,59 @@ def main():
         # Добавляем обработчик ошибок для отладки
         async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             """Логирует ошибки, вызванные обновлениями."""
-            bot_logger.error(f"Exception while handling an update: {context.error}", exc_info=context.error)
+            # Получаем информацию об ошибке
+            try:
+                error_msg = f"Исключение при обработке обновления: {context.error}"
+                
+                # Логируем ошибку с полным трейсбеком
+                bot_logger.error(error_msg, exc_info=context.error)
+                
+                # Сохраняем ошибку в базу данных
+                db = SessionLocal()
+                try:
+                    # Получаем пользователя, если возможно
+                    user_id = update.effective_user.id if update and update.effective_user else 0
+                    
+                    # Логируем ошибку как взаимодействие
+                    if user_id:
+                        from database.database import get_or_create_user
+                        user_profile = get_or_create_user(
+                            db=db,
+                            telegram_id=user_id,
+                            username=update.effective_user.username if update.effective_user else None,
+                            first_name=update.effective_user.first_name if update.effective_user else None,
+                            last_name=update.effective_user.last_name if update.effective_user else None
+                        )
+                        
+                        log_user_interaction(
+                            db=db,
+                            user_id=user_profile.id,
+                            action_type="error",
+                            action_data=error_msg[:500],  # Ограничиваем длину
+                            response_time=0,
+                            success=False
+                        )
+                except Exception as e:
+                    bot_logger.error(f"Не удалось записать ошибку в БД: {e}")
+                finally:
+                    db.close()
+                
+                # Если это критическая ошибка, уведомляем админа
+                if isinstance(context.error, (MemoryError, SystemError, OSError)):
+                    await context.bot.send_message(
+                        chat_id=CHAT_ID,
+                        text=f"⚠️ КРИТИЧЕСКАЯ ОШИБКА: {error_msg[:3000]}"
+                    )
+                
+                # Пытаемся отправить пользователю сообщение об ошибке
+                if update and update.effective_message:
+                    await update.effective_message.reply_text(
+                        "Извините, произошла ошибка при обработке вашего запроса. "
+                        "Пожалуйста, попробуйте еще раз или напишите команду /start."
+                    )
+            except Exception as e:
+                # Если произошла ошибка при обработке ошибки
+                bot_logger.error(f"Ошибка в обработчике ошибок: {e}", exc_info=True)
             
         application.add_error_handler(error_handler)
         bot_logger.info("Error handler added")
@@ -553,4 +663,33 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Добавляем небольшую задержку перед запуском, чтобы избежать быстрого перезапуска
+    bot_logger.info("Запуск бота с 3-секундной задержкой для предотвращения зацикливания")
+    time.sleep(3)
+    
+    # Проверка на наличие файла блокировки для предотвращения множественных запусков
+    lock_file = "bot_running.lock"
+    if os.path.exists(lock_file):
+        # Проверим, жив ли процесс
+        try:
+            with open(lock_file, 'r') as f:
+                pid = int(f.read().strip())
+            # Попытка отправить сигнал 0 для проверки существования процесса
+            os.kill(pid, 0)
+            bot_logger.warning(f"Обнаружен запущенный экземпляр бота (PID: {pid}). Завершаем текущий процесс.")
+            sys.exit(1)
+        except (ProcessLookupError, ValueError):
+            # Процесс не существует, можно продолжать
+            bot_logger.info("Обнаружен устаревший файл блокировки. Удаляем и продолжаем.")
+            os.remove(lock_file)
+    
+    # Создаем файл блокировки с текущим PID
+    with open(lock_file, 'w') as f:
+        f.write(str(os.getpid()))
+    
+    try:
+        main()
+    finally:
+        # Удаляем файл блокировки при завершении
+        if os.path.exists(lock_file):
+            os.remove(lock_file)
