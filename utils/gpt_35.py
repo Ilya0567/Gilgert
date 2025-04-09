@@ -5,6 +5,7 @@ import json
 import re
 from typing import Optional, Dict, Any, List
 
+
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Системное сообщение для задания контекста работы модели
