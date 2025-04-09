@@ -69,6 +69,7 @@ from handlers.menu import start_menu, menu_callback, cancel
 from handlers.gpt import handle_message
 from handlers.product import product_user_message
 from handlers.recipes import recipes_callback  
+from handlers.survey import send_survey_invitation, schedule_survey_reminders, handle_survey_callback
 from database.models import ClientProfile
 
 # Импорт конфигурации (TOKEN_BOT)
@@ -180,7 +181,6 @@ from handlers.stats import stats_recipes, stats_health, stats_users, stats_help
 
 from handlers.broadcast import get_broadcast_handler, process_broadcasts
 from handlers.admin import admin_commands
-from handlers.survey import send_survey_invitation, schedule_survey_reminders, handle_survey_callback
 
 async def send_daily_message(context, chat_id):
     """Отправляет ежедневное сообщение пользователям."""
