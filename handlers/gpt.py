@@ -37,10 +37,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Получено сообщение от пользователя {user_id}: {user_message[:50]}...")
     
     try:
-        # Получаем профиль пользователя из context.user_data
-        user_profile = context.user_data.get('user_profile')
-        if not user_profile:
-            # Если профиля нет в контексте, попробуем найти в БД по telegram_id
+        # Получаем user_id из контекста или создаем новый профиль
+        db_user_id = context.user_data.get('user_id')
+        if not db_user_id:
+            # Если id нет в контексте, создаем профиль пользователя
             user_profile = get_or_create_user(
                 db=db,
                 telegram_id=user_id,
@@ -48,11 +48,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 first_name=update.effective_user.first_name,
                 last_name=update.effective_user.last_name
             )
-            # Сохраняем в контексте для будущего использования
-            context.user_data['user_profile'] = user_profile
+            # Сохраняем ID в контексте для будущего использования
+            db_user_id = user_profile.id
+            context.user_data['user_id'] = db_user_id
             
-        # Используем ID пользователя из базы данных
-        db_user_id = user_profile.id
         logger.info(f"ID пользователя в БД: {db_user_id}")
         
         # Инициализируем историю сообщений из базы данных, если она не загружена

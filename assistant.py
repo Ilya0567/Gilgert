@@ -106,8 +106,13 @@ def track_user(func):
                 last_name=user.last_name
             )
             
-            # Сохраняем профиль пользователя в контексте для дальнейшего использования
-            context.user_data['user_profile'] = user_profile
+            # Сохраняем только ID и другие примитивные данные пользователя в контексте
+            # вместо объекта, который будет отвязан от сессии
+            context.user_data['user_id'] = user_profile.id
+            context.user_data['telegram_id'] = user_profile.telegram_id
+            context.user_data['username'] = user_profile.username
+            context.user_data['first_name'] = user_profile.first_name
+            context.user_data['last_name'] = user_profile.last_name
             
             # Handle session tracking
             if handler_name == 'start_menu':
@@ -272,11 +277,12 @@ async def handle_emoji_response(update: Update, context: ContextTypes.DEFAULT_TY
             last_name=user.last_name
         )
         
-        # Сохраняем обновленный профиль в контексте
-        context.user_data['user_profile'] = user_profile
+        # Сохраняем ID пользователя в контексте
+        user_id = user_profile.id
+        context.user_data['user_id'] = user_id
         
         # Сохраняем реакцию
-        add_health_check(db=db, user_id=user_profile.id, mood=mood)
+        add_health_check(db=db, user_id=user_id, mood=mood)
         
         # Отправляем подтверждение с обращением по имени
         mood_responses = {

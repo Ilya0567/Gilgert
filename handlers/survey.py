@@ -18,12 +18,12 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
     # Создаем сессию БД
     db = SessionLocal()
     try:
-        # Получаем профиль пользователя из контекста или из базы данных
-        user_profile = context.user_data.get('user_profile')
+        # Получаем ID пользователя из контекста или создаем новый профиль
+        user_id = context.user_data.get('user_id')
         
-        if not user_profile:
-            # Если профиль не найден в контексте, попробуем получить его из базы данных
-            survey_logger.info(f"Профиль пользователя {user.id} не найден в контексте, получаем из базы данных")
+        if not user_id:
+            # Если ID не найден в контексте, создаем профиль
+            survey_logger.info(f"ID пользователя {user.id} не найден в контексте, получаем из базы данных")
             from database.database import get_or_create_user
             user_profile = get_or_create_user(
                 db=db,
@@ -32,17 +32,18 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
                 first_name=user.first_name,
                 last_name=user.last_name
             )
-            # Сохраняем профиль в контексте
-            context.user_data['user_profile'] = user_profile
+            user_id = user_profile.id
+            # Сохраняем ID в контексте
+            context.user_data['user_id'] = user_id
         
-        if not user_profile:
-            survey_logger.error(f"Не удалось получить профиль пользователя {user.id} для отправки приглашения анкеты")
+        if not user_id:
+            survey_logger.error(f"Не удалось получить ID пользователя {user.id} для отправки приглашения анкеты")
             return
 
-        survey_logger.info(f"Отправка приглашения заполнить анкету пользователю {user.id} (профиль: {user_profile.id})")
+        survey_logger.info(f"Отправка приглашения заполнить анкету пользователю {user.id} (профиль: {user_id})")
         
         # Проверяем и обновляем статус анкеты
-        survey_status = get_or_create_survey_status(db, user_profile.id)
+        survey_status = get_or_create_survey_status(db, user_id)
         
         # Если анкета уже заполнена, не отправляем приглашение
         if survey_status.is_completed:
@@ -50,7 +51,7 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
             return
         
         # Обновляем время напоминания
-        update_survey_reminder(db, user_profile.id)
+        update_survey_reminder(db, user_id)
 
         # Формируем приветственное сообщение
         name = user.first_name or "друг"
@@ -199,19 +200,22 @@ async def handle_survey_callback(update: Update, context: ContextTypes.DEFAULT_T
             survey_logger.error(f"Не удалось получить профиль пользователя {user.id} для обработки callback анкеты")
             return
         
-        survey_logger.info(f"Обработка callback анкеты для пользователя {user.id} (профиль: {user_profile.id})")
-        survey_logger.info(f"Полученный профиль для ID {user.id}: {user_profile.id}")
+        # Получаем ID пользователя и сохраняем в контексте
+        user_id = user_profile.id
+        context.user_data['user_id'] = user_id
+        
+        survey_logger.info(f"Обработка callback анкеты для пользователя {user.id} (профиль: {user_id})")
         
         # Проверяем текущий статус
-        current_status = get_user_survey_status(db, user_profile.id)
+        current_status = get_user_survey_status(db, user_id)
         survey_logger.info(f"Текущий статус анкеты: {current_status and current_status.is_completed}")
         
         # Отмечаем анкету как заполненную
-        mark_survey_completed(db, user_profile.id)
-        survey_logger.info(f"Анкета отмечена как заполненная для пользователя с профилем {user_profile.id}")
+        mark_survey_completed(db, user_id)
+        survey_logger.info(f"Анкета отмечена как заполненная для пользователя с профилем {user_id}")
         
         # Проверяем, что статус обновился
-        updated_status = get_user_survey_status(db, user_profile.id)
+        updated_status = get_user_survey_status(db, user_id)
         survey_logger.info(f"Обновленный статус анкеты: {updated_status and updated_status.is_completed}")
         
         # Сохраняем статус и в user_data для надежности
