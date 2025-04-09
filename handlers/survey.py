@@ -62,11 +62,13 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
             f"Это займет всего несколько минут."
         )
         
-        # Создаем кнопку для перехода к анкете
-        keyboard = [
-            [InlineKeyboardButton("Заполнить анкету", url=f"http://your-domain.com/survey?telegram_id={user.id}")]  # URL будет заменен на настоящий
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        # Создаем inline кнопку для перехода к анкете
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(
+                text="Заполнить анкету", 
+                url=f"http://193.176.190.205/survey?telegram_id={user.id}"
+            )]
+        ])
         
         # Отправляем сообщение, учитывая разные контексты
         try:
@@ -78,7 +80,7 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
                     await context.bot.send_message(
                         chat_id=user.id,
                         text=message,
-                        reply_markup=reply_markup
+                        reply_markup=keyboard
                     )
                 except Exception as e:
                     survey_logger.error(f"Ошибка при отправке сообщения через callback_query: {e}", exc_info=True)
@@ -88,7 +90,7 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
                 await context.bot.send_message(
                     chat_id=user.id,
                     text=message,
-                    reply_markup=reply_markup
+                    reply_markup=keyboard
                 )
                 
             survey_logger.info(f"Приглашение заполнить анкету успешно отправлено пользователю {user.id}")
@@ -100,7 +102,7 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
                 await context.bot.send_message(
                     chat_id=user.id,
                     text=message,
-                    reply_markup=reply_markup,
+                    reply_markup=keyboard,
                     disable_notification=True  # Тихое сообщение
                 )
                 survey_logger.info(f"Приглашение отправлено альтернативным способом пользователю {user.id}")
@@ -139,17 +141,19 @@ async def send_survey_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
                     "Пожалуйста, найди несколько минут, чтобы пройти опрос."
                 )
                 
-                # Создаем кнопку для перехода к анкете
-                keyboard = [
-                    [InlineKeyboardButton("Заполнить анкету", url=f"http://your-domain.com/survey?telegram_id={user.telegram_id}")]  # URL будет заменен на настоящий
-                ]
-                reply_markup = InlineKeyboardMarkup(keyboard)
+                # Создаем inline кнопку для перехода к анкете
+                keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton(
+                        text="Заполнить анкету", 
+                        url=f"http://193.176.190.205/survey?telegram_id={user.telegram_id}"
+                    )]
+                ])
                 
                 # Отправляем напоминание
                 await context.bot.send_message(
                     chat_id=user.telegram_id,
                     text=message,
-                    reply_markup=reply_markup
+                    reply_markup=keyboard
                 )
                 
                 # Обновляем время последнего напоминания
