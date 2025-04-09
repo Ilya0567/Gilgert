@@ -133,7 +133,8 @@ class ChatGPTClient:
                         
                         # Возвращаем специальный маркер с контекстным ответом
                         return f"FUNCTION_CALL:show_healthy_recipes:{context_response}"
-                    except Exception as e:
+                    except (json.JSONDecodeError, AttributeError, TypeError) as e:
+                        print(f"Ошибка при парсинге аргументов функции: {e}")
                         # В случае ошибки, используем стандартный ответ
                         return "FUNCTION_CALL:show_healthy_recipes:Отлично! Сейчас покажу тебе наши здоровые рецепты 🥗"
             

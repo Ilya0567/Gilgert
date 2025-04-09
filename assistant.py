@@ -102,6 +102,9 @@ def track_user(func):
                 last_name=user.last_name
             )
             
+            # Сохраняем профиль пользователя в контексте для дальнейшего использования
+            context.user_data['user_profile'] = user_profile
+            
             # Handle session tracking
             if handler_name == 'start_menu':
                 # Create new session when user starts bot
@@ -287,9 +290,21 @@ def main():
         init_db()
         bot_logger.info("Database initialized successfully")
         
-        # Временно отключаем персистентность для отладки
-        bot_logger.info("Building application without persistence...")
-        application = ApplicationBuilder().token(TOKEN_BOT).build()
+        # Создаем объект персистентности для сохранения данных между перезапусками
+        persistence_path = 'persistence/data'
+        os.makedirs('persistence', exist_ok=True)
+        
+        bot_logger.info("Setting up persistence...")
+        persistence = PicklePersistence(
+            filepath=persistence_path,
+            store_data={"user_data": True, "chat_data": True, "bot_data": True, "callback_data": True, "conversations": True},
+            single_file=True,
+            on_flush=False,
+            update_interval=60  # Сохраняем каждые 60 секунд
+        )
+        
+        bot_logger.info("Building application with persistence...")
+        application = ApplicationBuilder().token(TOKEN_BOT).persistence(persistence).build()
         bot_logger.info("Application built successfully")
 
         # Обработчик сигналов для плавного завершения

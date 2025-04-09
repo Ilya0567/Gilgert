@@ -1,10 +1,11 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, Text, Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, Text, Float, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from .database import Base
 import logging
 import enum
+import datetime
 
 # Get logger for this module
 models_logger = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ class ClientProfile(Base):
     # Relationships
     sessions = relationship("UserSession", back_populates="user")
     interactions = relationship("UserInteraction", back_populates="user")
+    conversations = relationship("UserConversation", order_by=UserConversation.timestamp, back_populates="user")
     
     def __repr__(self):
         """String representation of the ClientProfile model"""
@@ -135,6 +137,22 @@ class BroadcastMessage(Base):
         return f"<BroadcastMessage(id={self.id}, scheduled_time={self.scheduled_time}, sent={self.sent})>"
 
 models_logger.info("BroadcastMessage model defined")
+
+class UserConversation(Base):
+    """Модель для хранения истории разговоров пользователя с ботом"""
+    __tablename__ = 'user_conversations'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('client_profiles.id'), nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    # Храним сообщения в формате JSON: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+    messages = Column(JSON, nullable=False, default=list)
+    
+    # Отношения
+    user = relationship("ClientProfile", back_populates="conversations")
+    
+    def __repr__(self):
+        return f"<UserConversation(user_id={self.user_id}, timestamp={self.timestamp})>"
 
 # Ensure all models are registered with Base metadata if needed elsewhere
 # For example, if you have a Base = declarative_base() line earlier, ensure this model uses it.

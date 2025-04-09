@@ -7,6 +7,8 @@ from utils.states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 from utils import gpt_35
 from utils.config import OPENAI_API_KEY
 from handlers.recipes import recipes_callback
+from database.database import SessionLocal
+from database.crud import get_user_conversation_history, update_conversation_history, get_or_create_user
 
 logger = logging.getLogger(__name__)
 
@@ -21,22 +23,45 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_message = update.message.text
+    user_id = update.effective_user.id
     
-    # Инициализируем историю сообщений, если её нет
-    if 'messages_history' not in context.user_data:
-        context.user_data['messages_history'] = []
+    # Создаем сессию базы данных
+    db = SessionLocal()
     
-    # Добавляем сообщение пользователя в историю
-    context.user_data['messages_history'].append({
-        "role": "user",
-        "content": user_message
-    })
-    
-    # Ограничиваем историю последними 10 сообщениями
-    if len(context.user_data['messages_history']) > 10:
-        context.user_data['messages_history'] = context.user_data['messages_history'][-10:]
-
     try:
+        # Получаем профиль пользователя из context.user_data
+        user_profile = context.user_data.get('user_profile')
+        if not user_profile:
+            # Если профиля нет в контексте, попробуем найти в БД по telegram_id
+            user_profile = get_or_create_user(
+                db=db,
+                telegram_id=user_id,
+                username=update.effective_user.username,
+                first_name=update.effective_user.first_name,
+                last_name=update.effective_user.last_name
+            )
+            # Сохраняем в контексте для будущего использования
+            context.user_data['user_profile'] = user_profile
+            
+        # Используем ID пользователя из базы данных
+        db_user_id = user_profile.id
+        
+        # Инициализируем историю сообщений из базы данных, если она не загружена
+        if 'messages_history' not in context.user_data:
+            # Загружаем историю из БД
+            context.user_data['messages_history'] = get_user_conversation_history(db, db_user_id)
+            logger.info(f"Loaded message history for user {user_id} from database")
+        
+        # Добавляем сообщение пользователя в историю
+        context.user_data['messages_history'].append({
+            "role": "user",
+            "content": user_message
+        })
+        
+        # Ограничиваем историю последними 10 сообщениями
+        if len(context.user_data['messages_history']) > 10:
+            context.user_data['messages_history'] = context.user_data['messages_history'][-10:]
+        
         # Создаем клиента GPT с сохраненной историей
         gpt_client = gpt_35.ChatGPTClient(api_key=OPENAI_API_KEY)
         
@@ -79,6 +104,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Не меняем состояние, чтобы пользователь мог продолжать общаться с ботом
                 # Просто добавляем флаг, что меню рецептов активно
                 context.user_data['recipes_menu_active'] = True
+                
+                # Добавляем ответ бота в историю
+                context.user_data['messages_history'].append({
+                    "role": "assistant",
+                    "content": context_response
+                })
+                
+                # Сохраняем историю в БД
+                update_conversation_history(db, db_user_id, context.user_data['messages_history'])
+                
                 return MENU
         
         # Обычный ответ (не вызов функции)
@@ -87,15 +122,28 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "role": "assistant",
             "content": gpt_response
         })
+        
+        # Сохраняем обновленную историю в базу данных
+        if db_user_id:
+            try:
+                update_conversation_history(db, db_user_id, context.user_data['messages_history'])
+                logger.info(f"Saved message history for user {user_id} to database")
+            except Exception as e:
+                logger.error(f"Failed to save message history: {e}")
+        else:
+            logger.warning(f"Cannot save message history: invalid user_id for user {user_id}")
 
         await update.message.reply_text(
             text=gpt_response
         )
         
     except Exception as e:
-        logger.error(f"Ошибка при работе с GPT: {e}")
+        logger.error(f"Ошибка при работе с GPT: {e}", exc_info=True)
         await update.message.reply_text(
             text=f"⚠️ Произошла ошибка при обработке вашего вопроса:\n{str(e)}"
         )
+    finally:
+        # Закрываем сессию БД
+        db.close()
 
     return MENU

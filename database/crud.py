@@ -2,8 +2,10 @@
 
 from sqlalchemy.orm import Session
 from .models import ClientProfile, RecipeRating, DailyHealthCheck, BroadcastMessage
+from database.models import UserConversation
 import logging
 from datetime import datetime, timedelta
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -200,4 +202,92 @@ def get_all_active_users(db: Session) -> list[ClientProfile]:
     """
     Get all users that have interacted with the bot
     """
-    return db.query(ClientProfile).filter(ClientProfile.is_active == True).all() 
+    return db.query(ClientProfile).filter(ClientProfile.is_active == True).all()
+
+# Функции для работы с историей диалогов
+
+def save_conversation_history(db: Session, user_id: int, messages: list):
+    """
+    Сохраняет историю диалога пользователя в базу данных
+    
+    Args:
+        db: Сессия базы данных
+        user_id: ID пользователя
+        messages: Список сообщений в формате [{role: 'user', content: '...'}, {role: 'assistant', content: '...'}]
+    """
+    try:
+        # Создаем новую запись
+        conversation = UserConversation(
+            user_id=user_id,
+            messages=messages
+        )
+        db.add(conversation)
+        db.commit()
+        db.refresh(conversation)
+        logger.info(f"Saved conversation history for user {user_id}")
+        return conversation
+    except Exception as e:
+        logger.error(f"Error saving conversation history: {e}")
+        db.rollback()
+        return None
+
+def get_user_conversation_history(db: Session, user_id: int, limit: int = 20):
+    """
+    Получает историю диалога пользователя из базы данных
+    
+    Args:
+        db: Сессия базы данных
+        user_id: ID пользователя
+        limit: Максимальное количество сообщений для возврата
+    
+    Returns:
+        list: Список сообщений в формате для отправки в GPT API
+    """
+    try:
+        # Получаем последнюю запись в истории диалогов пользователя
+        conversation = db.query(UserConversation)\
+            .filter(UserConversation.user_id == user_id)\
+            .order_by(UserConversation.timestamp.desc())\
+            .first()
+        
+        if conversation:
+            # Если есть история, возвращаем сообщения
+            logger.info(f"Found conversation history for user {user_id}")
+            return conversation.messages[-limit:] if conversation.messages else []
+        logger.info(f"No conversation history found for user {user_id}")
+        return []
+    except Exception as e:
+        logger.error(f"Error retrieving conversation history: {e}")
+        return []
+
+def update_conversation_history(db: Session, user_id: int, messages: list):
+    """
+    Обновляет историю диалога пользователя или создает новую, если не существует
+    
+    Args:
+        db: Сессия базы данных
+        user_id: ID пользователя
+        messages: Список сообщений в формате для отправки в GPT API
+    """
+    try:
+        # Находим последнюю запись
+        conversation = db.query(UserConversation)\
+            .filter(UserConversation.user_id == user_id)\
+            .order_by(UserConversation.timestamp.desc())\
+            .first()
+        
+        if conversation:
+            # Обновляем существующую запись
+            conversation.messages = messages
+            db.commit()
+            db.refresh(conversation)
+            logger.info(f"Updated conversation history for user {user_id}")
+            return conversation
+        else:
+            # Создаем новую запись
+            logger.info(f"Creating new conversation history for user {user_id}")
+            return save_conversation_history(db, user_id, messages)
+    except Exception as e:
+        logger.error(f"Error updating conversation history: {e}")
+        db.rollback()
+        return None 
