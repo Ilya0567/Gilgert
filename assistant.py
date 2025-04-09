@@ -170,6 +170,9 @@ handle_message = track_user(handle_message)
 product_user_message = track_user(product_user_message)
 recipes_callback = track_user(recipes_callback)
 cancel = track_user(cancel)
+# Apply tracking to universal handlers
+universal_message_handler = track_user(universal_message_handler)
+universal_command_handler = track_user(universal_command_handler)
 
 from stats_handler import get_stats
 
@@ -381,70 +384,66 @@ def main():
         application.add_handler(CommandHandler("table_broadcasts", table_broadcasts))
         bot_logger.info("Table handlers configured")
 
-        # Добавляем обработчик для всех текстовых сообщений вне ConversationHandler
-        # Если пользователь пишет сообщение без вызова /start, бот ответит как если бы команда была вызвана
-        bot_logger.info("Adding fallback message handler for non-conversation messages...")
+        # Главным источником проблемы является то, что fallback-обработчики вызываются 
+        # дополнительно к ConversationHandler, даже если он уже обработал сообщение.
+        # Переходим на другой подход: оставим только ConversationHandler, а fallback-логику
+        # реализуем внутри его fallbacks.
         
-        async def fallback_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Обрабатывает текстовые сообщения вне ConversationHandler (когда бот перезапущен)"""
-            bot_logger.info(f"Received message outside of conversation from user {update.effective_user.id}")
+        # Создаем общий обработчик для всех текстовых сообщений,
+        # который будет вызываться внутри ConversationHandler
+        async def universal_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Универсальный обработчик для всех текстовых сообщений"""
+            bot_logger.info(f"Universal message handler called for user {update.effective_user.id}")
             
-            # Проверяем, активен ли ConversationHandler
-            # Если активен - пропускаем обработку сообщения, чтобы избежать дублирования
-            if hasattr(context, '_active_conversation') and context._active_conversation:
-                bot_logger.info(f"Skipping fallback handling - active conversation detected")
-                return
-            
-            # Создаем ключевые структуры данных, если они отсутствуют
+            # Инициализируем контекст, если он не существует
             if not hasattr(context, 'user_data'):
                 context.user_data = {}
             if 'state' not in context.user_data:
                 context.user_data['state'] = MENU
-                
-            user = update.effective_user
-            if update.message and update.message.text.strip().lower() in ['привет', 'начать', 'старт', 'меню', '/start']:
-                # Если это приветственное сообщение, показываем стартовое меню
+            
+            # Приветственные сообщения - всегда показывать стартовое меню
+            if update.message and update.message.text.strip().lower() in ['привет', 'начать', 'старт', 'меню']:
                 return await start_menu(update, context)
-            else:
-                # Иначе обрабатываем как обычный запрос через GPT
-                bot_logger.info(f"Processing message as GPT query: '{update.message.text}'")
-                return await handle_message(update, context)
-        
-        # Обработчик неизвестных команд
-        async def unknown_command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Обрабатывает неизвестные команды вне ConversationHandler"""
-            bot_logger.info(f"Received unknown command from user {update.effective_user.id}: {update.message.text}")
             
-            # Создаем ключевые структуры данных, если они отсутствуют
+            # Остальные сообщения обрабатываем через GPT
+            return await handle_message(update, context)
+        
+        # Обработчик неизвестных команд, который будет использоваться как fallback в ConversationHandler
+        async def universal_command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Универсальный обработчик для всех команд, кроме /start"""
+            bot_logger.info(f"Universal command handler called for user {update.effective_user.id}: {update.message.text}")
+            
+            # Инициализируем контекст, если он не существует
             if not hasattr(context, 'user_data'):
                 context.user_data = {}
             if 'state' not in context.user_data:
                 context.user_data['state'] = MENU
             
-            # Предлагаем пользователю перейти к началу взаимодействия
+            # Если это команда /start, вызываем стандартный обработчик
+            if update.message.text.strip() == '/start':
+                return await start_menu(update, context)
+            
+            # Иначе сообщаем, что команда неизвестна
             await update.message.reply_text(
                 "Извини, я не знаю эту команду. Напиши /start, чтобы начать общение, или просто задай мне вопрос! 😊"
             )
             
             return MENU
-        
-        # Добавляем обработчики до основного ConversationHandler
-        # Это важно, так как ConversationHandler имеет приоритет над обычными обработчиками
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, fallback_text_handler), group=2)
-        bot_logger.info("Fallback text handler added (group 2)")
-        
-        # Добавляем обработчик для неизвестных команд с тем же приоритетом
-        application.add_handler(MessageHandler(filters.COMMAND & ~filters.Regex(r'^/start'), unknown_command_handler), group=2)
-        bot_logger.info("Unknown command handler added (group 2)")
 
-        # ConversationHandler описывает сценарий общения бота с пользователем.
+        # Настраиваем ConversationHandler с нашими универсальными обработчиками
+        # в качестве fallbacks, чтобы они обрабатывали все сообщения,
+        # которые не попадают под стандартные состояния
         bot_logger.info("Configuring conversation handler...")
         conv_handler = ConversationHandler(
-            entry_points=[CommandHandler("start", start_menu)],
+            entry_points=[
+                CommandHandler("start", start_menu),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, universal_message_handler),
+                MessageHandler(filters.COMMAND, universal_command_handler)
+            ],
             states={
                 MENU: [
                     CallbackQueryHandler(menu_callback, pattern="^(about|check_product|healthy_recipes|back_to_menu|breakfast|poldnik|lunch|dinner|bcat_.*|bitem_.*|pcat_.*|pitem_.*|lcat_.*|litem_.*|dcat_.*|ditem_.*|rate_recipe|rating_.*|ignore_rating|category_.*|dish_.*|drinks|drinks_cat_.*|drinks_name_.*)$"),
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)  # Обработка всех текстовых сообщений через GPT
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
                 ],
                 CHECK_PRODUCT: [
                     MessageHandler(filters.TEXT & ~filters.COMMAND, product_user_message),
@@ -454,13 +453,17 @@ def main():
                     CallbackQueryHandler(recipes_callback)
                 ],
             },
-            fallbacks=[CommandHandler("cancel", cancel)],
+            fallbacks=[
+                CommandHandler("cancel", cancel),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, universal_message_handler),
+                MessageHandler(filters.COMMAND, universal_command_handler)
+            ],
             allow_reentry=True,
-            name="main_conversation",  # Добавим имя для отладки
-            persistent=True  # Включаем сохранение состояния между перезапусками
+            name="main_conversation",
+            persistent=True
         )
         bot_logger.info("Adding conversation handler to application...")
-        application.add_handler(conv_handler, group=0)  # Добавляем с группой 0, чтобы он имел приоритет
+        application.add_handler(conv_handler)
         bot_logger.info("Conversation handler added")
 
         bot_logger.info("Setting up emoji response handler...")
