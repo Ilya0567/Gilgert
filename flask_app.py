@@ -121,7 +121,15 @@ def submit_survey():
             'contact_info': request.form.get('contact_info')
         }
         
+        app.logger.info(f"Данные анкеты: {form_data}")
+        
+        # Проверка корректности telegram_id
+        if not telegram_id:
+            app.logger.error("Отсутствует telegram_id в данных формы")
+            return jsonify({'success': False, 'message': 'Ошибка: отсутствует идентификатор пользователя'}), 400
+        
         # Сохраняем в БД
+        app.logger.info(f"Подключение к базе данных для сохранения анкеты пользователя {telegram_id}")
         conn = sqlite3.connect('survey_responses.db')
         cursor = conn.cursor()
         
@@ -153,34 +161,62 @@ def submit_survey():
         # Текущая дата и время
         submission_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
-        # Вставляем данные
-        cursor.execute('''
-        INSERT INTO survey_responses (
-            telegram_id, gender, age, diagnosis, family_history, 
-            bilirubin, childhood_jaundice, skin_yellowing, right_side_pain, 
-            other_liver_conditions, food_correlation, alcohol_correlation, 
-            fatigue_frequency, hunger_fatigue, exercise_feeling, 
-            overall_health, contact_info, submission_date
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            form_data['telegram_id'], form_data['gender'], form_data['age'], 
-            form_data['diagnosis'], form_data['family_history'],
-            form_data['bilirubin'], form_data['childhood_jaundice'], 
-            form_data['skin_yellowing'], form_data['right_side_pain'],
-            form_data['other_liver_conditions'], form_data['food_correlation'], 
-            form_data['alcohol_correlation'], form_data['fatigue_frequency'],
-            form_data['hunger_fatigue'], form_data['exercise_feeling'],
-            form_data['overall_health'], form_data['contact_info'], submission_date
-        ))
+        # Проверяем, есть ли уже анкета от этого пользователя
+        cursor.execute('SELECT id FROM survey_responses WHERE telegram_id = ?', (telegram_id,))
+        existing_entry = cursor.fetchone()
+        
+        if existing_entry:
+            app.logger.info(f"Найдена существующая анкета для пользователя {telegram_id}, обновляем данные")
+            
+            # Обновляем существующую запись
+            cursor.execute('''
+            UPDATE survey_responses SET
+                gender = ?, age = ?, diagnosis = ?, family_history = ?,
+                bilirubin = ?, childhood_jaundice = ?, skin_yellowing = ?, right_side_pain = ?,
+                other_liver_conditions = ?, food_correlation = ?, alcohol_correlation = ?,
+                fatigue_frequency = ?, hunger_fatigue = ?, exercise_feeling = ?,
+                overall_health = ?, contact_info = ?, submission_date = ?
+            WHERE telegram_id = ?
+            ''', (
+                form_data['gender'], form_data['age'], form_data['diagnosis'], form_data['family_history'],
+                form_data['bilirubin'], form_data['childhood_jaundice'], form_data['skin_yellowing'], form_data['right_side_pain'],
+                form_data['other_liver_conditions'], form_data['food_correlation'], form_data['alcohol_correlation'],
+                form_data['fatigue_frequency'], form_data['hunger_fatigue'], form_data['exercise_feeling'],
+                form_data['overall_health'], form_data['contact_info'], submission_date, telegram_id
+            ))
+            app.logger.info(f"Данные анкеты пользователя {telegram_id} успешно обновлены")
+        else:
+            app.logger.info(f"Создание новой записи анкеты для пользователя {telegram_id}")
+            
+            # Вставляем новые данные
+            cursor.execute('''
+            INSERT INTO survey_responses (
+                telegram_id, gender, age, diagnosis, family_history, 
+                bilirubin, childhood_jaundice, skin_yellowing, right_side_pain, 
+                other_liver_conditions, food_correlation, alcohol_correlation, 
+                fatigue_frequency, hunger_fatigue, exercise_feeling, 
+                overall_health, contact_info, submission_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                form_data['telegram_id'], form_data['gender'], form_data['age'], 
+                form_data['diagnosis'], form_data['family_history'],
+                form_data['bilirubin'], form_data['childhood_jaundice'], 
+                form_data['skin_yellowing'], form_data['right_side_pain'],
+                form_data['other_liver_conditions'], form_data['food_correlation'], 
+                form_data['alcohol_correlation'], form_data['fatigue_frequency'],
+                form_data['hunger_fatigue'], form_data['exercise_feeling'],
+                form_data['overall_health'], form_data['contact_info'], submission_date
+            ))
+            app.logger.info(f"Новая анкета пользователя {telegram_id} успешно создана")
         
         conn.commit()
         conn.close()
-        app.logger.info("Анкета успешно сохранена")
+        app.logger.info(f"Анкета успешно сохранена для пользователя {telegram_id}")
         
         return jsonify({'success': True, 'message': 'Анкета отправлена успешно'})
     
     except Exception as e:
-        app.logger.error(f"Ошибка при обработке анкеты: {e}")
+        app.logger.error(f"Ошибка при обработке анкеты: {e}", exc_info=True)
         return jsonify({'success': False, 'message': f'Ошибка: {str(e)}'}), 500
 
 # Маршрут для просмотра статистики заполнения анкет (для админов)

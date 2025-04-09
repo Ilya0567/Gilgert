@@ -217,18 +217,24 @@ def save_conversation_history(db: Session, user_id: int, messages: list):
         messages: Список сообщений в формате [{role: 'user', content: '...'}, {role: 'assistant', content: '...'}]
     """
     try:
+        # Проверяем, что пользователь существует
+        user = db.query(ClientProfile).filter(ClientProfile.id == user_id).first()
+        if not user:
+            logger.error(f"Пользователь с ID {user_id} не найден в базе данных")
+            return None
+            
         # Создаем новую запись
         conversation = UserConversation(
             user_id=user_id,
-            messages=messages
+            messages=messages if messages else []
         )
         db.add(conversation)
         db.commit()
         db.refresh(conversation)
-        logger.info(f"Saved conversation history for user {user_id}")
+        logger.info(f"Сохранена история диалога для пользователя {user_id}, ID записи: {conversation.id}")
         return conversation
     except Exception as e:
-        logger.error(f"Error saving conversation history: {e}")
+        logger.error(f"Ошибка сохранения истории диалога: {e}", exc_info=True)
         db.rollback()
         return None
 
@@ -253,12 +259,17 @@ def get_user_conversation_history(db: Session, user_id: int, limit: int = 20):
         
         if conversation:
             # Если есть история, возвращаем сообщения
-            logger.info(f"Found conversation history for user {user_id}")
-            return conversation.messages[-limit:] if conversation.messages else []
-        logger.info(f"No conversation history found for user {user_id}")
+            logger.info(f"Найдена история диалога для пользователя {user_id}, ID записи: {conversation.id}")
+            # Проверяем, что messages - это список
+            if conversation.messages and isinstance(conversation.messages, list):
+                return conversation.messages[-limit:] if conversation.messages else []
+            else:
+                logger.warning(f"История диалога для пользователя {user_id} имеет неправильный формат: {type(conversation.messages)}")
+                return []
+        logger.info(f"История диалога для пользователя {user_id} не найдена")
         return []
     except Exception as e:
-        logger.error(f"Error retrieving conversation history: {e}")
+        logger.error(f"Ошибка при получении истории диалога: {e}", exc_info=True)
         return []
 
 def update_conversation_history(db: Session, user_id: int, messages: list):
@@ -273,23 +284,37 @@ def update_conversation_history(db: Session, user_id: int, messages: list):
     Returns:
         The updated UserConversation object
     """
-    # Find the most recent conversation for this user
-    conversation = (
-        db.query(UserConversation)
-        .filter(UserConversation.user_id == user_id)
-        .order_by(UserConversation.timestamp.desc())
-        .first()
-    )
-    
-    # If conversation exists, update it
-    if conversation:
-        conversation.messages = messages
-        db.commit()
-        db.refresh(conversation)
-        return conversation
-    
-    # Otherwise create a new conversation
-    return save_conversation_history(db, user_id, messages)
+    try:
+        # Проверяем, что пользователь существует
+        user = db.query(ClientProfile).filter(ClientProfile.id == user_id).first()
+        if not user:
+            logger.error(f"Пользователь с ID {user_id} не найден в базе данных при обновлении истории")
+            return None
+            
+        # Find the most recent conversation for this user
+        conversation = (
+            db.query(UserConversation)
+            .filter(UserConversation.user_id == user_id)
+            .order_by(UserConversation.timestamp.desc())
+            .first()
+        )
+        
+        # If conversation exists, update it
+        if conversation:
+            logger.info(f"Обновляем существующую историю диалога (ID: {conversation.id}) для пользователя {user_id}")
+            conversation.messages = messages if messages else []
+            conversation.timestamp = datetime.now()  # Обновляем время для отображения в порядке последних изменений
+            db.commit()
+            db.refresh(conversation)
+            return conversation
+        
+        # Otherwise create a new conversation
+        logger.info(f"Создаем новую запись истории диалога для пользователя {user_id}")
+        return save_conversation_history(db, user_id, messages)
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении истории диалога: {e}", exc_info=True)
+        db.rollback()
+        return None
 
 # Функции для работы с анкетами пользователей
 

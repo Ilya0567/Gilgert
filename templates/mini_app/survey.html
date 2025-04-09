@@ -327,7 +327,11 @@
                         
                         // Перенаправляем обратно в Telegram, если есть параметр
                         if (telegramId) {
-                            window.location.href = `https://t.me/Gilbert_helper_bot?start=survey_completed`;
+                            console.log('Перенаправление обратно в Telegram с telegramId:', telegramId);
+                            // Добавляем таймаут для уверенности, что данные сохранились
+                            setTimeout(function() {
+                                window.location.href = `https://t.me/Gilbert_helper_bot?start=survey_completed`;
+                            }, 1000);
                         }
                     } else {
                         alert('Произошла ошибка при отправке анкеты. Пожалуйста, попробуйте еще раз.');

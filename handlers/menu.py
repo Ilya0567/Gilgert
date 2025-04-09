@@ -40,9 +40,17 @@ async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Отправляем приглашение заполнить анкету ТОЛЬКО при первом запуске через команду /start
     # и если пользователь еще не заполнил анкету
     if update.message and update.message.text == '/start':
+        # Проверяем сначала в context.user_data
+        survey_completed = context.user_data.get('survey_completed', False)
+        logger.info(f"Статус анкеты из context.user_data: {survey_completed}")
+        
+        if survey_completed:
+            logger.info(f"Пользователь {user.id} уже заполнил анкету (из context.user_data), приглашение не отправлено")
+            return MENU
+            
         # Проверяем, заполнил ли пользователь анкету
         from database.database import SessionLocal
-        from database.crud import get_or_create_survey_status
+        from database.crud import get_or_create_survey_status, get_user_survey_status
         
         db = SessionLocal()
         try:
@@ -56,12 +64,31 @@ async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 last_name=user.last_name
             )
             
+            logger.info(f"Проверка статуса анкеты для пользователя {user.id} (профиль: {user_profile.id})")
+            
             # Проверяем статус заполнения анкеты
+            survey_status = get_user_survey_status(db, user_profile.id)
+            
+            if survey_status and survey_status.is_completed:
+                logger.info(f"Пользователь {user.id} уже заполнил анкету, приглашение не отправлено")
+                # Сохраняем в context для будущих проверок
+                context.user_data['survey_completed'] = True
+                return MENU
+                
+            # Получаем или создаем статус
             survey_status = get_or_create_survey_status(db, user_profile.id)
             
             # Отправляем приглашение только если анкета не заполнена
             if not survey_status.is_completed:
+                logger.info(f"Отправка приглашения анкеты пользователю {user.id}")
                 await send_survey_invitation(update, context)
+            else:
+                # На случай, если статус неправильно обновился
+                logger.info(f"Пользователь {user.id} уже заполнил анкету после проверки, приглашение не отправлено")
+                # Сохраняем в context для будущих проверок
+                context.user_data['survey_completed'] = True
+        except Exception as e:
+            logger.error(f"Ошибка при проверке статуса анкеты: {e}", exc_info=True)
         finally:
             db.close()
     

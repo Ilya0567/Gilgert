@@ -2,7 +2,7 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from database.database import SessionLocal
-from database.crud import get_or_create_survey_status, update_survey_reminder, mark_survey_completed
+from database.crud import get_or_create_survey_status, update_survey_reminder, mark_survey_completed, get_user_survey_status
 import time
 import asyncio
 
@@ -180,6 +180,7 @@ async def handle_survey_callback(update: Update, context: ContextTypes.DEFAULT_T
     survey_logger.info("Получен callback после заполнения анкеты")
     
     user = update.effective_user
+    survey_logger.info(f"User ID для callback: {user.id}, username: {user.username}")
     
     # Создаем сессию БД
     db = SessionLocal()
@@ -199,9 +200,24 @@ async def handle_survey_callback(update: Update, context: ContextTypes.DEFAULT_T
             return
         
         survey_logger.info(f"Обработка callback анкеты для пользователя {user.id} (профиль: {user_profile.id})")
+        survey_logger.info(f"Полученный профиль для ID {user.id}: {user_profile.id}")
+        
+        # Проверяем текущий статус
+        current_status = get_user_survey_status(db, user_profile.id)
+        survey_logger.info(f"Текущий статус анкеты: {current_status and current_status.is_completed}")
         
         # Отмечаем анкету как заполненную
         mark_survey_completed(db, user_profile.id)
+        survey_logger.info(f"Анкета отмечена как заполненная для пользователя с профилем {user_profile.id}")
+        
+        # Проверяем, что статус обновился
+        updated_status = get_user_survey_status(db, user_profile.id)
+        survey_logger.info(f"Обновленный статус анкеты: {updated_status and updated_status.is_completed}")
+        
+        # Сохраняем статус и в user_data для надежности
+        if not context.user_data:
+            context.user_data = {}
+        context.user_data['survey_completed'] = True
         
         # Отправляем сообщение с благодарностью - используем send_message вместо reply_text
         await context.bot.send_message(
@@ -210,7 +226,7 @@ async def handle_survey_callback(update: Update, context: ContextTypes.DEFAULT_T
         )
         survey_logger.info(f"Отправлено сообщение с благодарностью пользователю {user.id}")
     except Exception as e:
-        survey_logger.error(f"Ошибка при обработке callback анкеты: {e}")
+        survey_logger.error(f"Ошибка при обработке callback анкеты: {e}", exc_info=True)
     finally:
         db.close()
 

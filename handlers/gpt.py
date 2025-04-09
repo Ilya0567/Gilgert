@@ -8,7 +8,7 @@ from utils import gpt_35
 from utils.config import OPENAI_API_KEY
 from handlers.recipes import recipes_callback
 from database.database import SessionLocal
-from database.crud import get_user_conversation_history, update_conversation_history, get_or_create_user
+from database.crud import get_user_conversation_history, update_conversation_history, get_or_create_user, save_conversation_history
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Создаем сессию базы данных
     db = SessionLocal()
     
+    logger.info(f"Получено сообщение от пользователя {user_id}: {user_message[:50]}...")
+    
     try:
         # Получаем профиль пользователя из context.user_data
         user_profile = context.user_data.get('user_profile')
@@ -51,6 +53,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         # Используем ID пользователя из базы данных
         db_user_id = user_profile.id
+        logger.info(f"ID пользователя в БД: {db_user_id}")
         
         # Инициализируем историю сообщений из базы данных, если она не загружена
         if 'messages_history' not in context.user_data:
@@ -59,11 +62,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Проверяем, что история не None и не пустой список
             if history and isinstance(history, list):
                 context.user_data['messages_history'] = history
-                logger.info(f"Loaded message history for user {user_id} from database: {len(history)} messages")
+                logger.info(f"Загружена история сообщений для пользователя {user_id} из БД: {len(history)} сообщений")
+                logger.debug(f"Содержимое истории: {history}")
             else:
                 # Инициализируем пустым списком, если история не найдена
                 context.user_data['messages_history'] = []
-                logger.info(f"No message history found for user {user_id}, initializing empty list")
+                logger.info(f"История сообщений для пользователя {user_id} не найдена, создаем пустой список")
+        else:
+            logger.info(f"Используем существующую историю: {len(context.user_data['messages_history'])} сообщений")
+            
+        # Выводим текущую историю для отладки
+        logger.info(f"История сообщений перед добавлением нового: {len(context.user_data.get('messages_history', []))} сообщений")
         
         # Добавляем сообщение пользователя в историю
         context.user_data['messages_history'].append({
@@ -74,6 +83,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Ограничиваем историю последними 10 сообщениями
         if len(context.user_data['messages_history']) > 10:
             context.user_data['messages_history'] = context.user_data['messages_history'][-10:]
+            logger.info(f"История сообщений ограничена 10 последними сообщениями")
         
         # Создаем клиента GPT с сохраненной историей
         gpt_client = gpt_35.ChatGPTClient(api_key=OPENAI_API_KEY)
@@ -125,7 +135,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 })
                 
                 # Сохраняем историю в БД
-                update_conversation_history(db, db_user_id, context.user_data['messages_history'])
+                updated_conversation = update_conversation_history(db, db_user_id, context.user_data['messages_history'])
+                logger.info(f"Сохранена история диалога для пользователя {user_id} в БД")
+                if updated_conversation:
+                    logger.info(f"История успешно сохранена, ID записи: {updated_conversation.id}")
+                else:
+                    logger.warning(f"Функция update_conversation_history вернула None")
                 
                 return MENU
         
@@ -139,12 +154,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Сохраняем обновленную историю в базу данных
         if db_user_id:
             try:
-                update_conversation_history(db, db_user_id, context.user_data['messages_history'])
-                logger.info(f"Saved message history for user {user_id} to database")
+                # Сохраняем историю в базу данных
+                updated_conversation = update_conversation_history(db, db_user_id, context.user_data['messages_history'])
+                logger.info(f"Сохранена история диалога для пользователя {user_id} в БД")
+                if updated_conversation:
+                    logger.info(f"История успешно сохранена, ID записи: {updated_conversation.id}")
+                else:
+                    logger.warning(f"Функция update_conversation_history вернула None")
             except Exception as e:
-                logger.error(f"Failed to save message history: {e}")
+                logger.error(f"Ошибка при сохранении истории диалога: {e}", exc_info=True)
+                # Попробуем еще раз, но создадим новую историю вместо обновления
+                try:
+                    new_conversation = save_conversation_history(db, db_user_id, context.user_data['messages_history'])
+                    logger.info(f"Создана новая запись истории диалога: {new_conversation and new_conversation.id}")
+                except Exception as e2:
+                    logger.error(f"Не удалось создать новую запись истории: {e2}", exc_info=True)
         else:
-            logger.warning(f"Cannot save message history: invalid user_id for user {user_id}")
+            logger.warning(f"Не удалось сохранить историю диалога: неверный user_id для пользователя {user_id}")
 
         await update.message.reply_text(
             text=gpt_response
