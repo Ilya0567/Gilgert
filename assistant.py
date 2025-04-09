@@ -12,7 +12,8 @@ from telegram.ext import (
     MessageHandler,
     filters,
     ContextTypes,
-    PicklePersistence
+    PicklePersistence,
+    PersistenceInput
 )
 import time
 from datetime import datetime, timedelta
@@ -298,7 +299,7 @@ def main():
             bot_logger.info("Setting up persistence...")
             persistence = PicklePersistence(
                 filepath=persistence_path,
-                store_data={"user_data": True, "chat_data": True, "bot_data": True, "callback_data": True, "conversations": True},
+                store_data=PersistenceInput(user_data=True, chat_data=True, bot_data=True, callback_data=True),
                 single_file=True,
                 on_flush=False,
                 update_interval=60  # Сохраняем каждые 60 секунд
