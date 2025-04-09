@@ -37,8 +37,33 @@ async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.edit_message_text(text=welcome_text, reply_markup=reply_markup)
     
-    # Отправляем приглашение заполнить анкету (если нужно)
-    await send_survey_invitation(update, context)
+    # Отправляем приглашение заполнить анкету ТОЛЬКО при первом запуске через команду /start
+    # и если пользователь еще не заполнил анкету
+    if update.message and update.message.text == '/start':
+        # Проверяем, заполнил ли пользователь анкету
+        from database.database import SessionLocal
+        from database.crud import get_or_create_survey_status
+        
+        db = SessionLocal()
+        try:
+            # Получаем профиль пользователя
+            from database.database import get_or_create_user
+            user_profile = get_or_create_user(
+                db=db,
+                telegram_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name
+            )
+            
+            # Проверяем статус заполнения анкеты
+            survey_status = get_or_create_survey_status(db, user_profile.id)
+            
+            # Отправляем приглашение только если анкета не заполнена
+            if not survey_status.is_completed:
+                await send_survey_invitation(update, context)
+        finally:
+            db.close()
     
     return MENU
 
