@@ -280,125 +280,115 @@ def main():
     """
     bot_logger.info("Starting bot application...")
     
-    # Import and initialize database here
-    from database.database import init_db
-    bot_logger.info("Initializing database...")
-    init_db()
-    bot_logger.info("Database initialized successfully")
-    
-    # Создаем объект персистентности для сохранения данных между перезапусками
-    persistence_path = 'persistence/data'
-    os.makedirs('persistence', exist_ok=True)
-    
-    bot_logger.info("Setting up persistence...")
-    persistence = PicklePersistence(
-        filepath=persistence_path,
-        store_data={"user_data": True, "chat_data": True, "bot_data": True, "callback_data": True, "conversations": True},
-        single_file=True,
-        on_flush=False,
-        update_interval=60  # Сохраняем каждые 60 секунд
-    )
-    
-    bot_logger.info("Building application with persistence...")
-    application = ApplicationBuilder().token(TOKEN_BOT).persistence(persistence).build()
-    bot_logger.info("Application built successfully")
+    try:
+        # Import and initialize database here
+        from database.database import init_db
+        bot_logger.info("Initializing database...")
+        init_db()
+        bot_logger.info("Database initialized successfully")
+        
+        # Временно отключаем персистентность для отладки
+        bot_logger.info("Building application without persistence...")
+        application = ApplicationBuilder().token(TOKEN_BOT).build()
+        bot_logger.info("Application built successfully")
 
-    # Обработчик сигналов для плавного завершения и сохранения состояния
-    def signal_handler(sig, frame):
-        bot_logger.info(f"Received signal {sig}, shutting down gracefully...")
-        # Остановить планировщик задач
-        if hasattr(application, 'scheduler') and application.scheduler:
-            application.scheduler.shutdown()
-        # Завершить работу бота
-        application.stop()
-        # Сохранить состояние
-        if persistence:
-            bot_logger.info("Saving state to disk before exit...")
-        sys.exit(0)
-    
-    bot_logger.info("Setting up signal handlers...")
-    # Регистрируем обработчики сигналов
-    signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
-    signal.signal(signal.SIGTERM, signal_handler)  # kill
-    
-    if hasattr(signal, 'SIGBREAK'):  # Windows
-        signal.signal(signal.SIGBREAK, signal_handler)
-    bot_logger.info("Signal handlers configured")
+        # Обработчик сигналов для плавного завершения
+        def signal_handler(sig, frame):
+            bot_logger.info(f"Received signal {sig}, shutting down gracefully...")
+            # Остановить планировщик задач
+            if hasattr(application, 'scheduler') and application.scheduler:
+                application.scheduler.shutdown()
+            # Завершить работу бота
+            application.stop()
+            sys.exit(0)
+        
+        bot_logger.info("Setting up signal handlers...")
+        # Регистрируем обработчики сигналов
+        signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
+        signal.signal(signal.SIGTERM, signal_handler)  # kill
+        
+        if hasattr(signal, 'SIGBREAK'):  # Windows
+            signal.signal(signal.SIGBREAK, signal_handler)
+        bot_logger.info("Signal handlers configured")
 
-    bot_logger.info("Registering command handlers...")
-    # Добавляем обработчик команды админа
-    application.add_handler(CommandHandler("admin", admin_commands))
+        bot_logger.info("Registering command handlers...")
+        # Добавляем обработчик команды админа
+        application.add_handler(CommandHandler("admin", admin_commands))
 
-    # Добавляем обработчики команд статистики
-    application.add_handler(CommandHandler("stats_recipes", stats_recipes))
-    application.add_handler(CommandHandler("stats_health", stats_health))
-    application.add_handler(CommandHandler("stats_users", stats_users))
-    application.add_handler(CommandHandler("stats_help", stats_help))
-    bot_logger.info("Command handlers registered")
+        # Добавляем обработчики команд статистики
+        application.add_handler(CommandHandler("stats_recipes", stats_recipes))
+        application.add_handler(CommandHandler("stats_health", stats_health))
+        application.add_handler(CommandHandler("stats_users", stats_users))
+        application.add_handler(CommandHandler("stats_help", stats_help))
+        bot_logger.info("Command handlers registered")
 
-    bot_logger.info("Setting up broadcast handler...")
-    # Добавляем обработчик рассылок
-    application.add_handler(get_broadcast_handler())
-    bot_logger.info("Broadcast handler configured")
+        bot_logger.info("Setting up broadcast handler...")
+        # Добавляем обработчик рассылок
+        application.add_handler(get_broadcast_handler())
+        bot_logger.info("Broadcast handler configured")
 
-    bot_logger.info("Setting up table handlers...")
-    # Добавляем обработчики команд для таблиц
-    from handlers.tables import (
-        table_users, table_sessions, table_interactions,
-        table_ratings, table_health, table_broadcasts
-    )
-    application.add_handler(CommandHandler("table_users", table_users))
-    application.add_handler(CommandHandler("table_sessions", table_sessions))
-    application.add_handler(CommandHandler("table_interactions", table_interactions))
-    application.add_handler(CommandHandler("table_ratings", table_ratings))
-    application.add_handler(CommandHandler("table_health", table_health))
-    application.add_handler(CommandHandler("table_broadcasts", table_broadcasts))
-    bot_logger.info("Table handlers configured")
+        bot_logger.info("Setting up table handlers...")
+        # Добавляем обработчики команд для таблиц
+        from handlers.tables import (
+            table_users, table_sessions, table_interactions,
+            table_ratings, table_health, table_broadcasts
+        )
+        application.add_handler(CommandHandler("table_users", table_users))
+        application.add_handler(CommandHandler("table_sessions", table_sessions))
+        application.add_handler(CommandHandler("table_interactions", table_interactions))
+        application.add_handler(CommandHandler("table_ratings", table_ratings))
+        application.add_handler(CommandHandler("table_health", table_health))
+        application.add_handler(CommandHandler("table_broadcasts", table_broadcasts))
+        bot_logger.info("Table handlers configured")
 
-    # ConversationHandler описывает сценарий общения бота с пользователем.
-    bot_logger.info("Configuring conversation handler...")
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start_menu)],
-        states={
-            MENU: [
-                CallbackQueryHandler(menu_callback, pattern="^(about|check_product|healthy_recipes|back_to_menu)$"),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)  # Обработка всех текстовых сообщений через GPT
-            ],
-            CHECK_PRODUCT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, product_user_message),
-                CallbackQueryHandler(menu_callback, pattern="^back_to_menu$")
-            ],
-            RECIPES: [
-                CallbackQueryHandler(recipes_callback)
-            ],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)],
-        allow_reentry=True,
-        name="main_conversation"  # Добавим имя для отладки
-    )
-    bot_logger.info("Adding conversation handler to application...")
-    application.add_handler(conv_handler)
-    bot_logger.info("Conversation handler added")
+        # ConversationHandler описывает сценарий общения бота с пользователем.
+        bot_logger.info("Configuring conversation handler...")
+        conv_handler = ConversationHandler(
+            entry_points=[CommandHandler("start", start_menu)],
+            states={
+                MENU: [
+                    CallbackQueryHandler(menu_callback, pattern="^(about|check_product|healthy_recipes|back_to_menu)$"),
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)  # Обработка всех текстовых сообщений через GPT
+                ],
+                CHECK_PRODUCT: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, product_user_message),
+                    CallbackQueryHandler(menu_callback, pattern="^back_to_menu$")
+                ],
+                RECIPES: [
+                    CallbackQueryHandler(recipes_callback)
+                ],
+            },
+            fallbacks=[CommandHandler("cancel", cancel)],
+            allow_reentry=True,
+            name="main_conversation"  # Добавим имя для отладки
+        )
+        bot_logger.info("Adding conversation handler to application...")
+        application.add_handler(conv_handler)
+        bot_logger.info("Conversation handler added")
 
-    bot_logger.info("Setting up emoji response handler...")
-    # Добавляем обработчик для нажатий на эмодзи
-    application.add_handler(CallbackQueryHandler(handle_emoji_response, pattern="^(very_sad|sad|neutral|good|very_good)$"))
-    bot_logger.info("Emoji handler configured")
+        bot_logger.info("Setting up emoji response handler...")
+        # Добавляем обработчик для нажатий на эмодзи
+        application.add_handler(CallbackQueryHandler(handle_emoji_response, pattern="^(very_sad|sad|neutral|good|very_good)$"))
+        bot_logger.info("Emoji handler configured")
 
-    bot_logger.info("Configuring job queue...")
-    # Настраиваем проверку рассылок каждую минуту
-    job_queue = application.job_queue
-    job_queue.run_repeating(process_broadcasts, interval=60)
-    bot_logger.info("Job queue configured")
+        bot_logger.info("Configuring job queue...")
+        # Настраиваем проверку рассылок каждую минуту
+        job_queue = application.job_queue
+        job_queue.run_repeating(process_broadcasts, interval=60)
+        bot_logger.info("Job queue configured")
 
-    bot_logger.info("Setting up daily messages...")
-    # Вызов функции schedule_daily_message в main()
-    schedule_daily_message(application)
-    bot_logger.info("Daily messages scheduled")
+        bot_logger.info("Setting up daily messages...")
+        # Вызов функции schedule_daily_message в main()
+        schedule_daily_message(application)
+        bot_logger.info("Daily messages scheduled")
 
-    bot_logger.info("Starting polling...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
-    bot_logger.info("Bot stopped")
+        bot_logger.info("Starting polling...")
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
+        bot_logger.info("Bot stopped")
+        
+    except Exception as e:
+        bot_logger.error(f"ERROR DURING BOT INITIALIZATION: {e}", exc_info=True)
+        raise
 
 
 if __name__ == "__main__":
