@@ -102,7 +102,11 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, call
 
     # Обрабатываем callback_query от кнопок меню рецептов, но остаемся в меню MENU
     # Это позволяет взаимодействовать с кнопками без переключения состояния
-    elif data in ["breakfast", "poldnik", "lunch", "dinner"] or data.startswith(("bcat_", "bitem_", "pcat_", "pitem_", "lcat_", "litem_", "dcat_", "ditem_")) or data == "rate_recipe" or data.startswith("rating_") or data == "ignore_rating":
+    elif data in ["breakfast", "poldnik", "lunch", "dinner", "drinks"] or \
+         data.startswith(("bcat_", "bitem_", "pcat_", "pitem_", "lcat_", "litem_", "dcat_", "ditem_")) or \
+         data == "rate_recipe" or data.startswith("rating_") or data == "ignore_rating" or \
+         data.startswith("category_") or data.startswith("dish_") or \
+         data.startswith("drinks_cat_") or data.startswith("drinks_name_"):
         from handlers.recipes import recipes_callback
         # Временно устанавливаем флаг, что работаем с рецептами
         context.user_data['temp_recipes_mode'] = True
