@@ -695,7 +695,7 @@ if __name__ == "__main__":
         f.write(str(os.getpid()))
     
     try:
-    main()
+        main()
     finally:
         # Удаляем файл блокировки при завершении
         if os.path.exists(lock_file):
