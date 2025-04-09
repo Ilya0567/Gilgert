@@ -31,8 +31,17 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Store the current callback data before processing
     context.user_data['last_callback_data'] = data
 
+    # Проверка нужно ли возвращать MENU или RECIPES в конце блока
+    def get_return_state():
+        # Если функция вызвана из MENU (через function calling), остаемся в меню
+        if context.user_data.get('temp_recipes_mode'):
+            return MENU
+        # Если функция вызвана через стандартную навигацию, возвращаем RECIPES
+        return RECIPES
+        
     # Если пользователь нажал "start" или "back_to_menu"
     if data in ('start', 'back_to_menu'):
+        # В любом случае вернуться к главному меню
         return await start_menu(update, context)
 
     # ---------- Завтраки ----------
@@ -52,7 +61,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         [InlineKeyboardButton("Назад", callback_data="start")]
                     ])
                 )
-                return RECIPES
+                return get_return_state()
 
         bf_gen = context.user_data["breakfast_generator"]
         # Получаем список категорий (например, 'каша', 'бутерброд', и т.д.)
@@ -65,7 +74,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("Назад", callback_data="start")]
                 ])
             )
-            return RECIPES
+            return get_return_state()
 
         # Формируем кнопки для категорий (столбец 'Блюдо из')
         keyboard_cats = []
@@ -80,7 +89,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text="Выберите категорию блюд (завтрак):",
             reply_markup=InlineKeyboardMarkup(keyboard_cats)
         )
-        return RECIPES
+        return get_return_state()
 
     elif data.startswith("bcat_"):
         # Пользователь выбрал конкретную категорию завтраков
@@ -95,7 +104,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("Назад", callback_data="breakfast")]
                 ])
             )
-            return RECIPES
+            return get_return_state()
 
         # Формируем кнопки для блюд
         keyboard_items = []
@@ -111,7 +120,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=f"Выберите блюдо из категории «{selected_cat}» (завтрак):",
             reply_markup=InlineKeyboardMarkup(keyboard_items)
         )
-        return RECIPES
+        return get_return_state()
 
     elif data.startswith("bitem_"):
         # Детали блюда (завтрак)
@@ -126,7 +135,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text="Ошибка: Не удалось загрузить детали завтрака.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="breakfast")]])
             )
-            return RECIPES
+            return get_return_state()
 
         details = bf_gen.get_item_details(item_name)
         selected_cat = context.user_data.get("bf_cat", "...") # Keep track of the category for back button
@@ -143,7 +152,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ])
         )
         # Track RECIPE_VIEW action (assuming track_user decorator handles this based on state/handler)
-        return RECIPES
+        return get_return_state()
 
     # ---------- Полдники ----------
     elif data == "poldnik":
@@ -161,7 +170,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         [InlineKeyboardButton("Назад", callback_data="start")]
                     ])
                 )
-                return RECIPES
+                return get_return_state()
 
         pd_gen = context.user_data["poldnik_generator"]
         categories = pd_gen.get_unique_categories()
@@ -173,7 +182,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("Назад", callback_data="start")]
                 ])
             )
-            return RECIPES
+            return get_return_state()
 
         keyboard_cats = []
         for cat in categories:
@@ -185,7 +194,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text="Выберите категорию (полдник):",
             reply_markup=InlineKeyboardMarkup(keyboard_cats)
         )
-        return RECIPES
+        return get_return_state()
 
     elif data.startswith("pcat_"):
         selected_cat = data.split("pcat_")[1]
@@ -199,7 +208,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("Назад", callback_data="poldnik")]
                 ])
             )
-            return RECIPES
+            return get_return_state()
 
         keyboard_items = []
         for i, name in enumerate(items):
@@ -214,7 +223,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=f"Выберите блюдо из категории «{selected_cat}» (полдник):",
             reply_markup=InlineKeyboardMarkup(keyboard_items)
         )
-        return RECIPES
+        return get_return_state()
 
     elif data.startswith("pitem_"):
         # Детали блюда (полдник)
@@ -228,7 +237,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text="Ошибка: Не удалось загрузить детали полдника.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="poldnik")]])
             )
-             return RECIPES
+             return get_return_state()
 
         details = pd_gen.get_item_details(item_name)
         selected_cat = context.user_data.get("pd_cat", "...")
@@ -244,7 +253,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("Назад", callback_data=f"pcat_{selected_cat}")]
             ])
         )
-        return RECIPES
+        return get_return_state()
 
     # ---------- Обеды (lunch) ----------
     elif data == "lunch":
@@ -261,7 +270,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         [InlineKeyboardButton("Назад", callback_data="start")]
                     ])
                 )
-                return RECIPES
+                return get_return_state()
 
         keyboard_categories = [
             [InlineKeyboardButton("Первые", callback_data="category_Первое блюдо")],
@@ -275,7 +284,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text="Выберите категорию блюд обеда:",
             reply_markup=InlineKeyboardMarkup(keyboard_categories)
         )
-        return RECIPES
+        return get_return_state()
 
     elif data.startswith("category_"):
         category = data.split("_", 1)[1]
@@ -287,7 +296,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("Назад", callback_data="start")]
                 ])
             )
-            return RECIPES
+            return get_return_state()
 
         dishes = lunch_generator.get_dishes_by_category(category)
         if not dishes:
@@ -297,7 +306,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("Назад", callback_data="lunch")]
                 ])
             )
-            return RECIPES
+            return get_return_state()
 
         keyboard_dishes = []
         for i, dish in enumerate(dishes):
@@ -311,7 +320,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=f"Выберите блюдо из категории '{category}':",
             reply_markup=InlineKeyboardMarkup(keyboard_dishes)
         )
-        return RECIPES
+        return get_return_state()
 
     elif data.startswith("dish_"): # Lunch item details
         dish_key = data
@@ -325,7 +334,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text="Ошибка: Не удалось загрузить детали обеда.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="lunch")]])
             )
-            return RECIPES
+            return get_return_state()
 
         details = lunch_generator.get_dish_details(dish_name)
 
@@ -340,7 +349,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("Назад", callback_data=f"category_{current_category}")]
             ])
         )
-        return RECIPES
+        return get_return_state()
 
     # ---------- Напитки (drinks) ----------
     elif data == "drinks":
@@ -356,7 +365,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         [InlineKeyboardButton("Назад", callback_data="start")]
                     ])
                 )
-                return RECIPES
+                return get_return_state()
 
         drinks_generator = context.user_data["drinks_generator"]
         categories = drinks_generator.get_unique_categories()
@@ -367,7 +376,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("Назад", callback_data="start")]
                 ])
             )
-            return RECIPES
+            return get_return_state()
 
         keyboard_drinks_cats = []
         for cat in categories:
@@ -379,7 +388,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text="Выберите категорию напитков:",
             reply_markup=InlineKeyboardMarkup(keyboard_drinks_cats)
         )
-        return RECIPES
+        return get_return_state()
 
     elif data.startswith("drinks_cat_"):
         selected_cat = data.split("drinks_cat_")[1]
@@ -390,7 +399,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text="Ошибка: нет данных по напиткам.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="drinks")]])
             )
-            return RECIPES
+            return get_return_state()
 
         drinks_in_cat = drinks_generator.get_drinks_by_category(selected_cat)
         if not drinks_in_cat:
@@ -398,7 +407,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text=f"В категории «{selected_cat}» нет напитков.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="drinks")]])
             )
-            return RECIPES
+            return get_return_state()
 
         keyboard_drinks_list = []
         for i, drink_name in enumerate(drinks_in_cat):
@@ -412,7 +421,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=f"Выберите напиток из категории «{selected_cat}»:",
             reply_markup=InlineKeyboardMarkup(keyboard_drinks_list)
         )
-        return RECIPES
+        return get_return_state()
 
     elif data.startswith("drinks_name_"):
         drinks_generator = context.user_data.get("drinks_generator")
@@ -426,7 +435,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text="Ошибка: Не удалось загрузить детали напитка.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="drinks")]])
             )
-            return RECIPES
+            return get_return_state()
 
         details = drinks_generator.get_drink_details(drink_name)
 
@@ -441,7 +450,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("Назад", callback_data=f"drinks_cat_{current_cat}")]
             ])
         )
-        return RECIPES
+        return get_return_state()
 
     # --- New handlers for rating ---
 
@@ -474,7 +483,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("Отмена", callback_data=context.user_data['return_to_recipe'])]
             ])
         )
-        return RECIPES
+        return get_return_state()
 
     elif data.startswith("rating_"):
         # User submitted a rating
@@ -489,7 +498,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Provide a way back, maybe to the recipe? Or menu?
                  reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("К рецептам", callback_data="healthy_recipes")]])
             )
-            return RECIPES
+            return get_return_state()
 
         # --- Database Interaction ---
         db = SessionLocal()
@@ -536,7 +545,7 @@ async def recipes_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         finally:
             db.close()
 
-        return RECIPES # Stay in recipe state or return to MENU? RECIPES seems okay.
+        return get_return_state() # Stay in recipe state or return to MENU? RECIPES seems okay.
 
     # Если никакая ветка не сработала
     logger.warning(f"Unhandled callback data in recipes_callback: {data}")
