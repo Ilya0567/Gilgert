@@ -1,22 +1,24 @@
-from flask import Flask, request, jsonify, send_file, abort, send_from_directory
+from flask import Flask, request, jsonify, send_file, abort, send_from_directory, render_template
 import os
 import sqlite3
 import subprocess
 from datetime import datetime
-from flask import render_template
-import logging  # добавляем стандартный модуль логирования
+# Полностью убираем импорт logging из Flask и явно импортируем стандартный модуль
+import logging as python_logging
 
 app = Flask(__name__)
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.DEBUG,
+# Настройка логирования с использованием явного python_logging
+python_logging.basicConfig(
+    level=python_logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("flask_app.log"),
-        logging.StreamHandler()
+        python_logging.FileHandler("flask_app.log"),
+        python_logging.StreamHandler()
     ]
 )
+# Создаем отдельный логгер для нашего приложения
+logger = python_logging.getLogger("flask_webapp")
 
 # Маршрут для проверки работы сервера
 @app.route('/')
@@ -73,13 +75,13 @@ def index():
 # Простой маршрут с текстом для тестирования
 @app.route('/test-text')
 def test_text():
-    app.logger.info("Запрос к /test-text получен")
+    logger.info("Запрос к /test-text получен")
     return "Это тестовая страница"
 
 # Вот отсюда важно - очень простая отдача HTML-файла
 @app.route('/survey')
 def survey():
-    app.logger.info("Запрос к /survey получен")
+    logger.info("Запрос к /survey получен")
     return render_template('mini_app/survey.html')
 
 # Обработка отправки опросника
@@ -88,7 +90,7 @@ def submit_survey():
     try:
         # Получаем данные формы
         telegram_id = request.form.get('telegram_id')
-        app.logger.info(f"Получены данные формы, telegram_id: {telegram_id}")
+        logger.info(f"Получены данные формы, telegram_id: {telegram_id}")
         
         # Собираем все данные в словарь
         form_data = {
@@ -111,15 +113,15 @@ def submit_survey():
             'contact_info': request.form.get('contact_info')
         }
         
-        app.logger.info(f"Данные анкеты: {form_data}")
+        logger.info(f"Данные анкеты: {form_data}")
         
         # Проверка корректности telegram_id
         if not telegram_id:
-            app.logger.error("Отсутствует telegram_id в данных формы")
+            logger.error("Отсутствует telegram_id в данных формы")
             return jsonify({'success': False, 'message': 'Ошибка: отсутствует идентификатор пользователя'}), 400
         
         # Сохраняем в БД
-        app.logger.info(f"Подключение к базе данных для сохранения анкеты пользователя {telegram_id}")
+        logger.info(f"Подключение к базе данных для сохранения анкеты пользователя {telegram_id}")
         conn = sqlite3.connect('survey_responses.db')
         cursor = conn.cursor()
         
@@ -156,7 +158,7 @@ def submit_survey():
         existing_entry = cursor.fetchone()
         
         if existing_entry:
-            app.logger.info(f"Найдена существующая анкета для пользователя {telegram_id}, обновляем данные")
+            logger.info(f"Найдена существующая анкета для пользователя {telegram_id}, обновляем данные")
             
             # Обновляем существующую запись
             cursor.execute('''
@@ -174,9 +176,9 @@ def submit_survey():
                 form_data['fatigue_frequency'], form_data['hunger_fatigue'], form_data['exercise_feeling'],
                 form_data['overall_health'], form_data['contact_info'], submission_date, telegram_id
             ))
-            app.logger.info(f"Данные анкеты пользователя {telegram_id} успешно обновлены")
+            logger.info(f"Данные анкеты пользователя {telegram_id} успешно обновлены")
         else:
-            app.logger.info(f"Создание новой записи анкеты для пользователя {telegram_id}")
+            logger.info(f"Создание новой записи анкеты для пользователя {telegram_id}")
             
             # Вставляем новые данные
             cursor.execute('''
@@ -197,16 +199,16 @@ def submit_survey():
                 form_data['hunger_fatigue'], form_data['exercise_feeling'],
                 form_data['overall_health'], form_data['contact_info'], submission_date
             ))
-            app.logger.info(f"Новая анкета пользователя {telegram_id} успешно создана")
+            logger.info(f"Новая анкета пользователя {telegram_id} успешно создана")
         
         conn.commit()
         conn.close()
-        app.logger.info(f"Анкета успешно сохранена для пользователя {telegram_id}")
+        logger.info(f"Анкета успешно сохранена для пользователя {telegram_id}")
         
         return jsonify({'success': True, 'message': 'Анкета отправлена успешно'})
     
     except Exception as e:
-        app.logger.error(f"Ошибка при обработке анкеты: {e}", exc_info=True)
+        logger.error(f"Ошибка при обработке анкеты: {e}", exc_info=True)
         return jsonify({'success': False, 'message': f'Ошибка: {str(e)}'}), 500
 
 # Маршрут для просмотра статистики заполнения анкет (для админов)
@@ -219,7 +221,7 @@ def stats():
         
         # Если пароль не предоставлен или неверный, показываем форму авторизации
         if password != admin_password:
-            app.logger.info("Попытка доступа к статистике без пароля или с неверным паролем")
+            logger.info("Попытка доступа к статистике без пароля или с неверным паролем")
             return """
             <!DOCTYPE html>
             <html>
@@ -269,7 +271,7 @@ def stats():
             </html>
             """
         
-        app.logger.info("Успешный запрос статистики анкет")
+        logger.info("Успешный запрос статистики анкет")
         
         # Подключаемся к БД с анкетами
         conn = sqlite3.connect('survey_responses.db')
@@ -376,7 +378,7 @@ def stats():
         """
         return html
     except Exception as e:
-        app.logger.error(f"Ошибка при формировании статистики: {e}")
+        logger.error(f"Ошибка при формировании статистики: {e}")
         return f"Ошибка при получении статистики: {e}", 500
 
 # Вспомогательная функция для отображения диагнозов в читаемом виде
@@ -394,7 +396,7 @@ def get_diagnosis_name(code):
 def post_receive():
     if request.method == 'POST':
         # Логируем входящий запрос
-        app.logger.info('Received webhook: %s', request.data)
+        logger.info('Received webhook: %s', request.data)
         # Выполнить ваш скрипт post-receive
         subprocess.call(['/root/project/Assistant/hooks/post-receive'])
         return '', 204
@@ -404,18 +406,18 @@ def post_receive():
 # Вебхук для телеграм-бота (если требуется)
 @app.route('/webhook', methods=['POST'])
 def telegram_webhook():
-    app.logger.info("Получен вебхук от Telegram")
+    logger.info("Получен вебхук от Telegram")
     try:
         # Перенаправление данных боту (в случае совместного размещения бота и веб-сервера)
         # Фактическая реализация зависит от структуры вашего проекта
         return jsonify({"success": True}), 200
     except Exception as e:
-        app.logger.error(f"Ошибка при обработке Telegram вебхука: {e}")
+        logger.error(f"Ошибка при обработке Telegram вебхука: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.logger.info("Запуск Flask-приложения")
-    app.logger.info(f"Рабочая директория: {os.getcwd()}")
-    app.logger.info(f"Содержимое папки: {os.listdir('.')}")
-    app.logger.info(f"Файл survey.html существует: {os.path.exists('survey.html')}")
+    logger.info("Запуск Flask-приложения")
+    logger.info(f"Рабочая директория: {os.getcwd()}")
+    logger.info(f"Содержимое папки: {os.listdir('.')}")
+    logger.info(f"Файл survey.html существует: {os.path.exists('survey.html')}")
     app.run(host='0.0.0.0', port=5000, debug=True)
