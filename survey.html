@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Анкета для людей с синдромом Жильбера</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #3498db;
+            margin-top: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="number"],
+        input[type="email"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .radio-option {
+            display: block;
+            margin: 10px 0;
+        }
+        .help-text {
+            font-size: 14px;
+            color: #777;
+            margin-top: 5px;
+        }
+        .submit-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: block;
+            margin: 30px auto 0;
+            transition: background-color 0.3s;
+        }
+        .submit-btn:hover {
+            background-color: #2980b9;
+        }
+        .required {
+            color: #e74c3c;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                padding: 15px;
+            }
+            h1 {
+                font-size: 24px;
+            }
+        }
+        /* Скрываем поле telegram_id */
+        #telegram_id_field {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Анкета для людей с синдромом Жильбера</h1>
+        <p>Пожалуйста, заполните эту анкету, чтобы помочь нам собрать информацию о синдроме Жильбера и улучшить рекомендации нашего бота.</p>
+        
+        <form id="surveyForm">
+            <!-- Скрытое поле для Telegram ID -->
+            <div id="telegram_id_field">
+                <input type="hidden" id="telegram_id" name="telegram_id" value="">
+            </div>
+            
+            <div class="form-group">
+                <label><span class="required">*</span> Ваш пол</label>
+                <label class="radio-option">
+                    <input type="radio" name="gender" value="male" required> Мужской
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="gender" value="female"> Женский
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Ваш возраст</label>
+                <input type="number" name="age" min="1" max="120" required>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> У вас официально диагностирован синдром Жильбера?</label>
+                <label class="radio-option">
+                    <input type="radio" name="diagnosis" value="yes_doctor" required> Да, врачом
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="diagnosis" value="yes_genetic"> Да, генетический тест
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="diagnosis" value="no"> Нет
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="diagnosis" value="not_sure"> Не уверен(а)
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Есть ли в вашей семье родственники с синдромом Жильбера?</label>
+                <label class="radio-option">
+                    <input type="radio" name="family_history" value="yes" required> Да
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="family_history" value="no"> Нет
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="family_history" value="not_sure"> Не знаю
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Известен ли вам ваш уровень билирубина?</label>
+                <label class="radio-option">
+                    <input type="radio" name="bilirubin" value="normal" required> Да, в пределах нормы
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="bilirubin" value="slightly_elevated"> Да, слегка повышен
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="bilirubin" value="elevated"> Да, значительно повышен
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="bilirubin" value="unknown"> Не знаю свой уровень
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Были ли у вас эпизоды желтухи в детстве?</label>
+                <label class="radio-option">
+                    <input type="radio" name="childhood_jaundice" value="yes" required> Да
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="childhood_jaundice" value="no"> Нет
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="childhood_jaundice" value="not_sure"> Не знаю
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Замечали ли вы пожелтение кожи или белков глаз?</label>
+                <label class="radio-option">
+                    <input type="radio" name="skin_yellowing" value="often" required> Да, часто
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="skin_yellowing" value="sometimes"> Да, иногда
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="skin_yellowing" value="rarely"> Редко
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="skin_yellowing" value="never"> Никогда
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Испытываете ли вы боль или дискомфорт в правом боку?</label>
+                <label class="radio-option">
+                    <input type="radio" name="right_side_pain" value="often" required> Да, часто
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="right_side_pain" value="sometimes"> Да, иногда
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="right_side_pain" value="rarely"> Редко
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="right_side_pain" value="never"> Никогда
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Есть ли у вас другие заболевания печени?</label>
+                <label class="radio-option">
+                    <input type="radio" name="other_liver_conditions" value="yes" required> Да
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="other_liver_conditions" value="no"> Нет
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="other_liver_conditions" value="not_sure"> Не знаю
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Замечали ли вы связь между определенными продуктами и ухудшением самочувствия?</label>
+                <label class="radio-option">
+                    <input type="radio" name="food_correlation" value="strong" required> Да, сильная связь
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="food_correlation" value="moderate"> Да, умеренная связь
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="food_correlation" value="weak"> Слабая связь
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="food_correlation" value="none"> Нет связи
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Влияет ли употребление алкоголя на ваше самочувствие?</label>
+                <label class="radio-option">
+                    <input type="radio" name="alcohol_correlation" value="strong_negative" required> Да, сильно ухудшает
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="alcohol_correlation" value="moderate_negative"> Умеренно ухудшает
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="alcohol_correlation" value="no_effect"> Не влияет
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="alcohol_correlation" value="dont_drink"> Не употребляю алкоголь
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Как часто вы испытываете усталость?</label>
+                <label class="radio-option">
+                    <input type="radio" name="fatigue_frequency" value="constantly" required> Почти постоянно
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="fatigue_frequency" value="often"> Часто
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="fatigue_frequency" value="sometimes"> Иногда
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="fatigue_frequency" value="rarely"> Редко
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Замечаете ли вы связь между пропуском приема пищи и сильной усталостью?</label>
+                <label class="radio-option">
+                    <input type="radio" name="hunger_fatigue" value="strong" required> Да, сильная связь
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="hunger_fatigue" value="moderate"> Умеренная связь
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="hunger_fatigue" value="weak"> Слабая связь
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="hunger_fatigue" value="none"> Нет связи
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Как вы оцениваете свое самочувствие после умеренных физических нагрузок?</label>
+                <label class="radio-option">
+                    <input type="radio" name="exercise_feeling" value="excellent" required> Отлично
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="exercise_feeling" value="good"> Удовлетворительно
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="exercise_feeling" value="bad"> Плохо
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="exercise_feeling" value="very_bad"> Ужасно
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label><span class="required">*</span> Как вы оцениваете свое общее состояние здоровья?</label>
+                <label class="radio-option">
+                    <input type="radio" name="overall_health" value="excellent" required> Отличное
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="overall_health" value="good"> Хорошее
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="overall_health" value="satisfactory"> Удовлетворительное
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="overall_health" value="bad"> Плохое
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="overall_health" value="very_bad"> Очень плохое
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>Если вы хотите помочь в нашем исследовании и пообщаться на эту тему, пожалуйста, оставьте вашу контактную информацию:</label>
+                <input type="text" name="contact_info">
+                <div class="help-text">Можно оставить номер телефона, ник в телеграме, страницу в соц.сетях</div>
+            </div>
+
+            <button type="submit" class="submit-btn">Отправить</button>
+        </form>
+    </div>
+
+    <script>
+        // Получаем telegram_id из URL параметров
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const telegramId = urlParams.get('telegram_id');
+            if (telegramId) {
+                document.getElementById('telegram_id').value = telegramId;
+            }
+            
+            // Отправка формы
+            document.getElementById('surveyForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                fetch('/submit-survey', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Показываем сообщение об успешной отправке
+                        alert('Спасибо за заполнение анкеты!');
+                        
+                        // Перенаправляем обратно в Telegram, если есть параметр
+                        if (telegramId) {
+                            window.location.href = `https://t.me/gilbert_helper_bot?start=survey_completed`;
+                        }
+                    } else {
+                        alert('Произошла ошибка при отправке анкеты. Пожалуйста, попробуйте еще раз.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при отправке анкеты. Пожалуйста, попробуйте еще раз.');
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

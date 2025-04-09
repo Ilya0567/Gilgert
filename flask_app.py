@@ -5,18 +5,22 @@ import os
 import sqlite3
 from datetime import datetime
 
-app = Flask(__name__)
-
+# Определяем базовую директорию проекта
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-log_path = os.path.join(BASE_DIR, "flask_app.log")  # корректный путь
+
+# Настраиваем Flask с правильными путями для шаблонов и статических файлов
+app = Flask(__name__, 
+           template_folder=os.path.join(BASE_DIR),  # корневая директория для шаблонов
+           static_folder=os.path.join(BASE_DIR, "static"))  # папка для статических файлов
 
 # Настройка логирования
+log_path = os.path.join(BASE_DIR, "flask_app.log")
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(message)s',
     handlers=[
-        logging.FileHandler(log_path),  # Логи в файл
-        logging.StreamHandler()         # Логи в консоль (по желанию)
+        logging.FileHandler(log_path),
+        logging.StreamHandler()
     ]
 )
 
@@ -57,9 +61,7 @@ def init_survey_db():
 @app.route('/post-receive', methods=['POST'])
 def post_receive():
     if request.method == 'POST':
-        # Логируем входящий запрос
         app.logger.info('Received webhook: %s', request.data)
-        # Выполнить ваш скрипт post-receive
         try:
             subprocess.check_call(['/root/project/Assistant/hooks/post-receive'])
         except subprocess.CalledProcessError as e:
@@ -69,58 +71,47 @@ def post_receive():
     else:
         return '', 400
 
-# Страница с опросником - несколько разных маршрутов для надежности
+# Простой маршрут для проверки работы сервера
+@app.route('/')
+def index():
+    return "Сервер работает! Доступные маршруты: /survey, /test-text"
+
+# Страница с опросником - приоритет на прямую отдачу файла
 @app.route('/survey')
 def survey():
-    try:
-        # Простая версия без шаблонизатора
-        return send_file('mini_app/survey.html')
-    except Exception as e:
-        app.logger.error(f"Ошибка при отправке файла survey.html: {e}")
-        try:
-            # Пробуем через шаблонизатор
-            return render_template('mini_app/survey.html')
-        except Exception as e2:
-            app.logger.error(f"Ошибка при рендеринге шаблона: {e2}")
-            # Пробуем прочитать файл напрямую
+    app.logger.info("Запрос к /survey получен")
+    
+    # Проверяем все возможные пути к файлу
+    possible_paths = [
+        os.path.join(BASE_DIR, 'mini_app', 'survey.html'),
+        os.path.join(BASE_DIR, 'templates', 'mini_app', 'survey.html'),
+        os.path.join(BASE_DIR, 'survey.html')
+    ]
+    
+    # Логируем доступные пути для отладки
+    for path in possible_paths:
+        app.logger.info(f"Проверка пути: {path}, существует: {os.path.exists(path)}")
+    
+    # Перебираем все возможные пути и пытаемся отдать файл
+    for path in possible_paths:
+        if os.path.exists(path):
+            app.logger.info(f"Найден файл по пути: {path}")
             try:
-                with open('mini_app/survey.html', 'r', encoding='utf-8') as f:
+                with open(path, 'r', encoding='utf-8') as f:
                     content = f.read()
                 return content
-            except Exception as e3:
-                app.logger.error(f"Все методы получения файла анкеты не сработали: {e3}")
-                return f"Ошибка загрузки файла анкеты. Пожалуйста, сообщите администратору.", 500
+            except Exception as e:
+                app.logger.error(f"Ошибка при чтении файла {path}: {e}")
+    
+    # Если файл не найден ни по одному пути, возвращаем ошибку
+    app.logger.error("Файл анкеты не найден ни по одному из путей")
+    return "Ошибка: файл анкеты не найден. Пожалуйста, сообщите администратору.", 500
 
-# Тестовый прямой маршрут для анкеты
-@app.route('/survey-direct')
-def survey_direct():
-    try:
-        with open('mini_app/survey.html', 'r', encoding='utf-8') as f:
-            content = f.read()
-        return content
-    except Exception as e:
-        app.logger.error(f"Ошибка при чтении файла напрямую: {e}")
-        return f"Ошибка загрузки файла анкеты: {e}", 500
-
-# Тестовый маршрут для проверки
-@app.route('/test')
-def test_route():
-    try:
-        with open('test.html', 'r', encoding='utf-8') as f:
-            return f.read()
-    except:
-        return "Тестовая страница работает!"
-
-# Тестовый маршрут с простым текстом
+# Тестовый маршрут с простым текстом - для проверки работы сервера
 @app.route('/test-text')
 def test_text():
     app.logger.info("Запрос к /test-text получен успешно")
     return "Тестовая страница работает! Это простой текст."
-
-# Статические файлы из mini_app
-@app.route('/mini_app/<path:path>')
-def send_mini_app(path):
-    return send_from_directory('mini_app', path)
 
 # Обработка отправки опросника
 @app.route('/submit-survey', methods=['POST'])
@@ -221,4 +212,14 @@ def submit_survey():
 init_survey_db()
 
 if __name__ == '__main__':
+    # Логируем базовую директорию и пути
+    app.logger.info(f"Базовая директория проекта: {BASE_DIR}")
+    app.logger.info(f"Папка шаблонов: {app.template_folder}")
+    app.logger.info(f"Папка статики: {app.static_folder}")
+    
+    # Логируем доступность файла анкеты
+    survey_file = os.path.join(BASE_DIR, 'mini_app', 'survey.html')
+    app.logger.info(f"Файл анкеты: {survey_file}, существует: {os.path.exists(survey_file)}")
+    
+    # Запускаем сервер
     app.run(host='0.0.0.0', port=5000, debug=True)
