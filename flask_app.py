@@ -19,7 +19,54 @@ logging.basicConfig(
 # Маршрут для проверки работы сервера
 @app.route('/')
 def index():
-    return "Сервер работает"
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Сервер анкет Жильбера</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+            h1 { color: #2c3e50; }
+            .card { 
+                background-color: #f8f9fa; 
+                border-radius: 5px; 
+                padding: 20px; 
+                margin-bottom: 20px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
+            a.btn {
+                display: inline-block;
+                background-color: #3498db;
+                color: white;
+                text-decoration: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                margin-right: 10px;
+            }
+            a.btn:hover {
+                background-color: #2980b9;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Сервер анкет для людей с синдромом Жильбера</h1>
+        
+        <div class="card">
+            <h2>Системный статус</h2>
+            <p>✅ Сервер работает нормально</p>
+            <p>✅ Доступны все функции</p>
+        </div>
+        
+        <div class="card">
+            <h2>Доступные страницы</h2>
+            <p>
+                <a href="/survey" class="btn">Заполнить анкету</a>
+                <a href="/stats" class="btn">Просмотреть статистику</a>
+            </p>
+        </div>
+    </body>
+    </html>
+    """
 
 # Простой маршрут с текстом для тестирования
 @app.route('/test-text')
@@ -134,6 +181,186 @@ def submit_survey():
     except Exception as e:
         app.logger.error(f"Ошибка при обработке анкеты: {e}")
         return jsonify({'success': False, 'message': f'Ошибка: {str(e)}'}), 500
+
+# Маршрут для просмотра статистики заполнения анкет (для админов)
+@app.route('/stats', methods=['GET', 'POST'])
+def stats():
+    try:
+        # Проверка авторизации через параметр password
+        password = request.args.get('password')
+        admin_password = "gilbert_stats_2023"  # Простой пароль для доступа
+        
+        # Если пароль не предоставлен или неверный, показываем форму авторизации
+        if password != admin_password:
+            app.logger.info("Попытка доступа к статистике без пароля или с неверным паролем")
+            return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Доступ к статистике</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+                    h1 { color: #2c3e50; }
+                    .card { 
+                        background-color: #f8f9fa; 
+                        border-radius: 5px; 
+                        padding: 20px; 
+                        margin-bottom: 20px;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                    }
+                    input[type="password"] {
+                        padding: 8px;
+                        width: 100%;
+                        max-width: 300px;
+                        margin-bottom: 15px;
+                    }
+                    button {
+                        background-color: #3498db;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                    }
+                    button:hover {
+                        background-color: #2980b9;
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Доступ к статистике</h1>
+                
+                <div class="card">
+                    <h2>Требуется авторизация</h2>
+                    <p>Для просмотра статистики введите пароль администратора:</p>
+                    <form action="/stats" method="get">
+                        <input type="password" name="password" placeholder="Введите пароль">
+                        <button type="submit">Войти</button>
+                    </form>
+                </div>
+            </body>
+            </html>
+            """
+        
+        app.logger.info("Успешный запрос статистики анкет")
+        
+        # Подключаемся к БД с анкетами
+        conn = sqlite3.connect('survey_responses.db')
+        cursor = conn.cursor()
+        
+        # Общее количество заполненных анкет
+        cursor.execute('SELECT COUNT(*) FROM survey_responses')
+        total_surveys = cursor.fetchone()[0]
+        
+        # Статистика по полу
+        cursor.execute('SELECT gender, COUNT(*) FROM survey_responses GROUP BY gender')
+        gender_stats = cursor.fetchall()
+        
+        # Средний возраст
+        cursor.execute('SELECT AVG(age) FROM survey_responses WHERE age IS NOT NULL')
+        avg_age = cursor.fetchone()[0]
+        
+        # Статистика по диагнозу
+        cursor.execute('SELECT diagnosis, COUNT(*) FROM survey_responses GROUP BY diagnosis')
+        diagnosis_stats = cursor.fetchall()
+        
+        # Последние 10 заполнивших
+        cursor.execute('SELECT telegram_id, submission_date FROM survey_responses ORDER BY submission_date DESC LIMIT 10')
+        recent_submissions = cursor.fetchall()
+        
+        conn.close()
+        
+        # Формируем HTML с статистикой
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Статистика заполнения анкет</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                h1 {{ color: #2c3e50; }}
+                .stat-card {{ 
+                    background-color: #f8f9fa; 
+                    border-radius: 5px; 
+                    padding: 15px; 
+                    margin-bottom: 20px;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                }}
+                table {{ width: 100%; border-collapse: collapse; }}
+                th, td {{ padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }}
+                th {{ background-color: #f2f2f2; }}
+                tr:hover {{ background-color: #f5f5f5; }}
+                .back-link {{
+                    display: inline-block;
+                    margin-top: 20px;
+                    color: #3498db;
+                    text-decoration: none;
+                }}
+                .back-link:hover {{
+                    text-decoration: underline;
+                }}
+            </style>
+        </head>
+        <body>
+            <h1>Статистика заполнения анкет</h1>
+            
+            <div class="stat-card">
+                <h2>Общие данные</h2>
+                <p>Всего заполнено анкет: <strong>{total_surveys}</strong></p>
+                <p>Средний возраст: <strong>{avg_age:.1f if avg_age else 'Нет данных'}</strong></p>
+            </div>
+            
+            <div class="stat-card">
+                <h2>Распределение по полу</h2>
+                <table>
+                    <tr>
+                        <th>Пол</th>
+                        <th>Количество</th>
+                    </tr>
+                    {''.join(f'<tr><td>{"Мужской" if g[0] == "male" else "Женский" if g[0] == "female" else g[0]}</td><td>{g[1]}</td></tr>' for g in gender_stats)}
+                </table>
+            </div>
+            
+            <div class="stat-card">
+                <h2>Распределение по диагнозу</h2>
+                <table>
+                    <tr>
+                        <th>Диагноз</th>
+                        <th>Количество</th>
+                    </tr>
+                    {''.join(f'<tr><td>{get_diagnosis_name(d[0])}</td><td>{d[1]}</td></tr>' for d in diagnosis_stats)}
+                </table>
+            </div>
+            
+            <div class="stat-card">
+                <h2>Последние заполненные анкеты</h2>
+                <table>
+                    <tr>
+                        <th>Telegram ID</th>
+                        <th>Дата заполнения</th>
+                    </tr>
+                    {''.join(f'<tr><td>{r[0]}</td><td>{r[1]}</td></tr>' for r in recent_submissions)}
+                </table>
+            </div>
+            
+            <a href="/" class="back-link">← Вернуться на главную</a>
+        </body>
+        </html>
+        """
+        return html
+    except Exception as e:
+        app.logger.error(f"Ошибка при формировании статистики: {e}")
+        return f"Ошибка при получении статистики: {e}", 500
+
+# Вспомогательная функция для отображения диагнозов в читаемом виде
+def get_diagnosis_name(code):
+    diagnoses = {
+        'yes_doctor': 'Диагностирован врачом',
+        'yes_genetic': 'Подтвержден генетическим тестом',
+        'no': 'Не диагностирован',
+        'not_sure': 'Не уверен'
+    }
+    return diagnoses.get(code, code)
 
 if __name__ == '__main__':
     app.logger.info("Запуск Flask-приложения")
