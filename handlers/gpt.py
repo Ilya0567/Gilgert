@@ -18,7 +18,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     если не активно другое состояние (проверка продукта и т.д.)
     """
     # Инициализируем структуры данных, если они отсутствуют
-    if 'user_data' not in context:
+    if not hasattr(context, 'user_data'):
         context.user_data = {}
     if 'state' not in context.user_data:
         context.user_data['state'] = MENU

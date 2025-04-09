@@ -15,7 +15,7 @@ async def product_user_message(update: Update, context: ContextTypes.DEFAULT_TYP
     бот проверяет и отвечает.
     """
     # Инициализируем структуры данных, если они отсутствуют
-    if 'user_data' not in context:
+    if not hasattr(context, 'user_data'):
         context.user_data = {}
     if 'state' not in context.user_data:
         context.user_data['state'] = CHECK_PRODUCT

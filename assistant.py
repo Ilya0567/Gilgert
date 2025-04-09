@@ -249,7 +249,7 @@ async def handle_emoji_response(update: Update, context: ContextTypes.DEFAULT_TY
     user_name = user.first_name if user.first_name else "пользователь"
     
     # Создаем ключевые структуры данных, если они отсутствуют
-    if 'user_data' not in context:
+    if not hasattr(context, 'user_data'):
         context.user_data = {}
     if 'state' not in context.user_data:
         context.user_data['state'] = MENU
@@ -390,7 +390,7 @@ def main():
             bot_logger.info(f"Received message outside of conversation from user {update.effective_user.id}")
             
             # Создаем ключевые структуры данных, если они отсутствуют
-            if 'user_data' not in context:
+            if not hasattr(context, 'user_data'):
                 context.user_data = {}
             if 'state' not in context.user_data:
                 context.user_data['state'] = MENU
@@ -410,7 +410,7 @@ def main():
             bot_logger.info(f"Received unknown command from user {update.effective_user.id}: {update.message.text}")
             
             # Создаем ключевые структуры данных, если они отсутствуют
-            if 'user_data' not in context:
+            if not hasattr(context, 'user_data'):
                 context.user_data = {}
             if 'state' not in context.user_data:
                 context.user_data['state'] = MENU
