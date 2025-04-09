@@ -362,6 +362,45 @@ def get_diagnosis_name(code):
     }
     return diagnoses.get(code, code)
 
+# Обработчик вебхуков от GitHub/GitLab для обновления кода
+@app.route('/post-receive', methods=['POST'])
+def post_receive_webhook():
+    app.logger.info("Получен вебхук от Git")
+    
+    try:
+        # Проверка origin запроса (можно добавить секретный ключ)
+        # request.headers.get('X-Hub-Signature')
+        
+        # Запускаем скрипт обновления
+        import subprocess
+        result = subprocess.run(
+            ['bash', 'start_bot.sh'], 
+            capture_output=True, 
+            text=True
+        )
+        
+        app.logger.info(f"Результат обновления: {result.stdout}")
+        if result.returncode != 0:
+            app.logger.error(f"Ошибка при обновлении: {result.stderr}")
+            return jsonify({"success": False, "error": result.stderr}), 500
+            
+        return jsonify({"success": True, "message": "Обновление успешно запущено"}), 200
+    except Exception as e:
+        app.logger.error(f"Ошибка при обработке вебхука: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# Вебхук для телеграм-бота (если требуется)
+@app.route('/webhook', methods=['POST'])
+def telegram_webhook():
+    app.logger.info("Получен вебхук от Telegram")
+    try:
+        # Перенаправление данных боту (в случае совместного размещения бота и веб-сервера)
+        # Фактическая реализация зависит от структуры вашего проекта
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        app.logger.error(f"Ошибка при обработке Telegram вебхука: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 if __name__ == '__main__':
     app.logger.info("Запуск Flask-приложения")
     app.logger.info(f"Рабочая директория: {os.getcwd()}")

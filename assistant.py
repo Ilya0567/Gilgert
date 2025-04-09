@@ -417,11 +417,18 @@ def main():
             if 'state' not in context.user_data:
                 context.user_data['state'] = MENU
             
+            current_state = context.user_data.get('state')
+            
             # Приветственные сообщения - всегда показывать стартовое меню
             if update.message and update.message.text.strip().lower() in ['привет', 'начать', 'старт', 'меню']:
                 return await start_menu(update, context)
             
-            # Остальные сообщения обрабатываем через GPT
+            # Если мы уже в состоянии MENU, должен работать обработчик из states,
+            # но если мы попали сюда через fallbacks - используем handle_message напрямую
+            if current_state == MENU:
+                return await handle_message(update, context)
+            
+            # Для других состояний используем просто handle_message
             return await handle_message(update, context)
         
         # Обработчик неизвестных команд, который будет использоваться как fallback в ConversationHandler
@@ -476,7 +483,6 @@ def main():
             },
             fallbacks=[
                 CommandHandler("cancel", cancel),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, universal_message_handler),
                 MessageHandler(filters.COMMAND, universal_command_handler)
             ],
             allow_reentry=True,
