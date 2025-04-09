@@ -160,8 +160,8 @@ def schedule_survey_reminders(scheduler):
     scheduler.add_job(
         send_survey_reminder,
         'cron', 
-        hour=12,  # Отправляем напоминания в 12:00
-        minute=0,
+        hour=15,  # Отправляем напоминания в 12:00
+        minute=1,
         id='survey_reminder'
     )
     survey_logger.info("Задача отправки напоминаний об анкете добавлена в планировщик") 
