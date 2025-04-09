@@ -6,6 +6,7 @@ from telegram.ext import ContextTypes
 from utils.states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 from utils import gpt_35
 from utils.config import OPENAI_API_KEY
+from handlers.menu import menu_callback
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,29 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message_history=context.user_data['messages_history']
         )
         
+        # Проверяем, был ли вызов функции
+        if gpt_response.startswith("FUNCTION_CALL:"):
+            function_name = gpt_response.split(":")[1]
+            
+            # Обработка вызова функции показа рецептов
+            if function_name == "show_healthy_recipes":
+                logger.info(f"Function call detected: {function_name}")
+                # Имитируем нажатие на кнопку "healthy_recipes"
+                dummy_callback_query = type('obj', (object,), {
+                    'data': 'healthy_recipes',
+                    'message': update.message,
+                    'answer': lambda: None
+                })
+                
+                # Создаем сообщение о переходе к рецептам
+                await update.message.reply_text(
+                    "Отлично! Сейчас покажу тебе наши здоровые рецепты 🥗"
+                )
+                
+                # Вызываем обработчик меню для перехода к рецептам
+                return await menu_callback(update, context, callback_query=dummy_callback_query)
+        
+        # Обычный ответ (не вызов функции)
         # Добавляем ответ в историю
         context.user_data['messages_history'].append({
             "role": "assistant",

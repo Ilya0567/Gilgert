@@ -34,12 +34,13 @@ async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return MENU
 
 
-async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, callback_query=None):
     """
     Обработка нажатий на кнопки главного меню.
+    Параметр callback_query позволяет передать внешний объект callback_query для имитации нажатия кнопки.
     """
     
-    query = update.callback_query
+    query = callback_query or update.callback_query
     await query.answer()
     data = query.data
 

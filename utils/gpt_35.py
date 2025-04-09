@@ -26,19 +26,35 @@ SYSTEM_MESSAGE = """Ты дружелюбный и позитивный асси
 - Психологическое благополучие
 - Здоровый образ жизни
 
+Когда пользователь спрашивает о рецептах, здоровом питании, диетах или просит предложить варианты блюд, используй функцию show_healthy_recipes для отображения меню с рецептами.
+
 Если пользователь задает вопрос, не связанный с вышеперечисленными темами, вежливо объясни, что можешь консультировать только по вопросам здоровья и благополучия, и предложи задать вопрос из этой области."""
 
+# Определение доступных функций
+FUNCTIONS = [
+    {
+        "name": "show_healthy_recipes",
+        "description": "Показать меню с подборкой здоровых рецептов пользователю",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    }
+]
+
 class ChatGPTClient:
-    def __init__(self, api_key=OPENAI_API_KEY, model="gpt-4o-mini", temperature=0.9, max_tokens=300):
+    def __init__(self, api_key=None, model="gpt-3.5-turbo", temperature=0.9, max_tokens=2000):
         """
         Инициализация клиента ChatGPT.
 
         :param api_key: API-ключ для доступа к OpenAI (по умолчанию из конфига)
-        :param model: Модель для использования (по умолчанию "gpt-4-0125-preview")
+        :param model: Модель для использования (по умолчанию "gpt-3.5-turbo")
         :param temperature: Креативность модели (увеличена для более дружелюбных ответов)
         :param max_tokens: Максимальное количество токенов в ответе
         """
-        self.client = OpenAI(api_key=api_key)
+        self.api_key = api_key or OPENAI_API_KEY
+        self.client = OpenAI(api_key=self.api_key)
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -75,16 +91,29 @@ class ChatGPTClient:
         messages.append({"role": "user", "content": user_message})
         
         try:
-            # Отправляем запрос к API
+            # Отправляем запрос к API с функциями
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=self.temperature,
-                max_tokens=self.max_tokens
+                max_tokens=self.max_tokens,
+                functions=FUNCTIONS,
+                function_call="auto"
             )
             
+            response_message = response.choices[0].message
+            
+            # Проверяем, вызвал ли модель функцию
+            if hasattr(response_message, 'function_call') and response_message.function_call:
+                function_call = response_message.function_call
+                
+                # Если вызвана функция показа рецептов
+                if function_call.name == "show_healthy_recipes":
+                    # Возвращаем специальный маркер, который будет обработан в обработчике
+                    return "FUNCTION_CALL:show_healthy_recipes"
+            
             # Получаем текст ответа
-            response_text = response.choices[0].message.content.strip()
+            response_text = response_message.content.strip()
             
             # Удаляем звездочки из ответа
             response_text = re.sub(r'\*', '', response_text)
