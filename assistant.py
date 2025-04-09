@@ -428,7 +428,7 @@ def main():
         bot_logger.info("Fallback text handler added")
         
         # Добавляем обработчик для неизвестных команд с тем же приоритетом
-        application.add_handler(MessageHandler(filters.COMMAND & ~filters.COMMAND("start"), unknown_command_handler), group=1)
+        application.add_handler(MessageHandler(filters.COMMAND & ~filters.Regex(r'^/start'), unknown_command_handler), group=1)
         bot_logger.info("Unknown command handler added")
 
         # ConversationHandler описывает сценарий общения бота с пользователем.
