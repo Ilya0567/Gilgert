@@ -389,6 +389,12 @@ def main():
             """Обрабатывает текстовые сообщения вне ConversationHandler (когда бот перезапущен)"""
             bot_logger.info(f"Received message outside of conversation from user {update.effective_user.id}")
             
+            # Проверяем, активен ли ConversationHandler
+            # Если активен - пропускаем обработку сообщения, чтобы избежать дублирования
+            if hasattr(context, '_active_conversation') and context._active_conversation:
+                bot_logger.info(f"Skipping fallback handling - active conversation detected")
+                return
+            
             # Создаем ключевые структуры данных, если они отсутствуют
             if not hasattr(context, 'user_data'):
                 context.user_data = {}
@@ -424,12 +430,12 @@ def main():
         
         # Добавляем обработчики до основного ConversationHandler
         # Это важно, так как ConversationHandler имеет приоритет над обычными обработчиками
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, fallback_text_handler), group=1)
-        bot_logger.info("Fallback text handler added")
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, fallback_text_handler), group=2)
+        bot_logger.info("Fallback text handler added (group 2)")
         
         # Добавляем обработчик для неизвестных команд с тем же приоритетом
-        application.add_handler(MessageHandler(filters.COMMAND & ~filters.Regex(r'^/start'), unknown_command_handler), group=1)
-        bot_logger.info("Unknown command handler added")
+        application.add_handler(MessageHandler(filters.COMMAND & ~filters.Regex(r'^/start'), unknown_command_handler), group=2)
+        bot_logger.info("Unknown command handler added (group 2)")
 
         # ConversationHandler описывает сценарий общения бота с пользователем.
         bot_logger.info("Configuring conversation handler...")
@@ -454,7 +460,7 @@ def main():
             persistent=True  # Включаем сохранение состояния между перезапусками
         )
         bot_logger.info("Adding conversation handler to application...")
-        application.add_handler(conv_handler)
+        application.add_handler(conv_handler, group=0)  # Добавляем с группой 0, чтобы он имел приоритет
         bot_logger.info("Conversation handler added")
 
         bot_logger.info("Setting up emoji response handler...")
@@ -472,6 +478,14 @@ def main():
         # Вызов функции schedule_daily_message в main()
         schedule_daily_message(application)
         bot_logger.info("Daily messages scheduled")
+
+        # Добавляем обработчик ошибок для отладки
+        async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+            """Логирует ошибки, вызванные обновлениями."""
+            bot_logger.error(f"Exception while handling an update: {context.error}", exc_info=context.error)
+            
+        application.add_error_handler(error_handler)
+        bot_logger.info("Error handler added")
 
         bot_logger.info("Starting polling...")
         
