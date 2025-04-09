@@ -2,6 +2,7 @@ import logging
 import os
 import signal
 import sys
+import json
 from logging.handlers import RotatingFileHandler
 from functools import wraps
 from telegram.ext import (
@@ -73,7 +74,7 @@ from handlers.survey import send_survey_invitation, schedule_survey_reminders, h
 from database.models import ClientProfile
 
 # Импорт конфигурации (TOKEN_BOT)
-from utils.config import TOKEN_BOT, CHAT_ID
+from utils.config import TOKEN_BOT, CHAT_ID, TELEGRAM_TOKEN, ALLOWED_USER_IDS, APP_ENV, DEBUG, SUPPORT_CHAT_ID, CONFIG_JSON_PATH, ADMIN_IDS
 
 # Dictionary to store active sessions
 active_sessions = {}
@@ -419,9 +420,31 @@ def main():
             
             current_state = context.user_data.get('state')
             
-            # Приветственные сообщения - всегда показывать стартовое меню
+            # Приветственные сообщения - показываем стартовое меню, но не отправляем приглашение анкеты
             if update.message and update.message.text.strip().lower() in ['привет', 'начать', 'старт', 'меню']:
-                return await start_menu(update, context)
+                # Создаем копию объекта update с временным текстом для избегания отправки анкеты
+                # Используем оригинальный update, но просто вызываем handle_message вместо start_menu
+                keyboard = [
+                    [InlineKeyboardButton("Здоровые рецепты", callback_data='healthy_recipes')]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                # Получаем имя пользователя
+                user = update.effective_user
+                user_name = user.first_name if user.first_name else "пользователь"
+
+                # Приветствие с обращением по имени
+                welcome_text = (
+                    f"👋 Привет, {user_name}! Я ваш помощник, созданный специально для людей с синдромом Жильбера.\n\n"
+                    "Я могу помочь тебе с рекомендациями по продуктам питания и ответить на вопросы о том, "
+                    "можно ли употреблять определенный продукт или блюдо при синдроме Жильбера.\n\n"
+                    "✨ Просто спроси меня в чате о любом продукте или блюде, и я подскажу, разрешено ли оно к употреблению "
+                    "и какие могут быть нюансы или противопоказания.\n\n"
+                    "📝 Также ты можешь посмотреть собранные мной вкусные здоровые рецепты, нажав на кнопку ниже."
+                )
+
+                await update.message.reply_text(text=welcome_text, reply_markup=reply_markup)
+                return MENU
             
             # Если мы уже в состоянии MENU, должен работать обработчик из states,
             # но если мы попали сюда через fallbacks - используем handle_message напрямую
