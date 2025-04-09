@@ -294,45 +294,57 @@ async def handle_emoji_response(update: Update, context: ContextTypes.DEFAULT_TY
 
 def main():
     """Основная функция запуска бота."""
-    
-    # Создаем объект персистентности
-    persistence = PicklePersistence(
-        filepath="bot_data",
-        store_data=PersistenceInput(
-            bot_data=True,
-            chat_data=True,
-            user_data=True,
-            callback_data=True,
-        ),
-    )
-    
-    # Инициализируем приложение с токеном и персистентностью
-    application = ApplicationBuilder().token(TOKEN_BOT).persistence(persistence).build()
-    bot_logger.info("Создание планировщика задач")
-    
-    # Создаем и настраиваем планировщик
-    scheduler = AsyncIOScheduler(timezone=pytz.utc)
-    
-    # Добавляем обработку рассылок
-    schedule_daily_message(application)
-    
-    # Добавляем планирование задачи обработки рассылок
-    scheduler.add_job(
-        lambda: asyncio.create_task(process_broadcasts(application)),
-        'interval',
-        minutes=1,  # Проверяем рассылки каждую минуту
-        id='process_broadcasts'
-    )
-    
-    # Добавляем планирование задачи напоминаний об анкете
-    schedule_survey_reminders(scheduler, application)
-    
-    # Запускаем планировщик
-    scheduler.start()
-    
-    bot_logger.info("Starting bot application...")
-    
     try:
+        # Создаем объект персистентности
+        persistence = PicklePersistence(
+            filepath="bot_data",
+            store_data=PersistenceInput(
+                bot_data=True,
+                chat_data=True,
+                user_data=True,
+                callback_data=True,
+            ),
+        )
+        
+        # Инициализируем приложение с токеном и персистентностью
+        application = ApplicationBuilder().token(TOKEN_BOT).persistence(persistence).build()
+        bot_logger.info("Создание планировщика задач")
+        
+        try:
+            # Создаем и настраиваем планировщик
+            scheduler = AsyncIOScheduler(timezone=pytz.utc)
+            
+            # Добавляем обработку рассылок
+            bot_logger.info("Настройка ежедневных сообщений...")
+            schedule_daily_message(application)
+            bot_logger.info("Ежедневные сообщения настроены")
+            
+            # Добавляем планирование задачи обработки рассылок
+            bot_logger.info("Настройка обработки рассылок...")
+            scheduler.add_job(
+                lambda: asyncio.create_task(process_broadcasts(application)),
+                'interval',
+                minutes=1,  # Проверяем рассылки каждую минуту
+                id='process_broadcasts',
+                replace_existing=True  # Заменяем существующую задачу
+            )
+            bot_logger.info("Обработка рассылок настроена")
+            
+            # Добавляем планирование задачи напоминаний об анкете
+            bot_logger.info("Настройка напоминаний об анкете...")
+            schedule_survey_reminders(scheduler, application)
+            bot_logger.info("Напоминания об анкете настроены")
+            
+            # Запускаем планировщик
+            bot_logger.info("Запуск планировщика...")
+            scheduler.start()
+            bot_logger.info("Планировщик запущен")
+        except Exception as e:
+            bot_logger.error(f"Ошибка при настройке планировщика: {e}", exc_info=True)
+            # Продолжаем выполнение, даже если планировщик не запустился
+        
+        bot_logger.info("Starting bot application...")
+        
         # Import and initialize database here
         from database.database import init_db
         bot_logger.info("Initializing database...")
@@ -491,11 +503,6 @@ def main():
         job_queue = application.job_queue
         job_queue.run_repeating(process_broadcasts, interval=60)
         bot_logger.info("Job queue configured")
-
-        bot_logger.info("Setting up daily messages...")
-        # Вызов функции schedule_daily_message в main()
-        schedule_daily_message(application)
-        bot_logger.info("Daily messages scheduled")
 
         # Добавляем обработчик ошибок для отладки
         async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

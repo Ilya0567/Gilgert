@@ -70,14 +70,19 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
         
         # Отправляем сообщение, учитывая разные контексты
         try:
+            survey_logger.info(f"Попытка отправки приглашения пользователю {user.id}")
             # Если обновление пришло из callback_query и это не первое сообщение
-            if update.callback_query and not update.callback_query.message.text:
-                # Отправляем новое сообщение
-                await context.bot.send_message(
-                    chat_id=user.id,
-                    text=message,
-                    reply_markup=reply_markup
-                )
+            if update.callback_query and hasattr(update.callback_query, 'message') and update.callback_query.message:
+                try:
+                    # Отправляем новое сообщение
+                    await context.bot.send_message(
+                        chat_id=user.id,
+                        text=message,
+                        reply_markup=reply_markup
+                    )
+                except Exception as e:
+                    survey_logger.error(f"Ошибка при отправке сообщения через callback_query: {e}", exc_info=True)
+                    raise
             else:
                 # Отправляем обычное сообщение
                 await context.bot.send_message(
@@ -89,16 +94,19 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
             survey_logger.info(f"Приглашение заполнить анкету успешно отправлено пользователю {user.id}")
         except Exception as e:
             survey_logger.error(f"Ошибка при отправке сообщения с приглашением: {e}", exc_info=True)
-            # Пытаемся отправить сообщение другим способом
+            # Пытаемся отправить сообщение другим способом - прямой вызов API
             try:
+                survey_logger.info(f"Попытка отправки сообщения альтернативным способом пользователю {user.id}")
                 await context.bot.send_message(
                     chat_id=user.id,
                     text=message,
-                    reply_markup=reply_markup
+                    reply_markup=reply_markup,
+                    disable_notification=True  # Тихое сообщение
                 )
                 survey_logger.info(f"Приглашение отправлено альтернативным способом пользователю {user.id}")
             except Exception as e2:
                 survey_logger.error(f"Не удалось отправить приглашение альтернативным способом: {e2}", exc_info=True)
+                # Не выбрасываем исключение, чтобы не прерывать работу бота
             
     except Exception as e:
         survey_logger.error(f"Ошибка при отправке приглашения анкеты пользователю {user.id}: {e}", exc_info=True)
@@ -165,7 +173,9 @@ async def handle_survey_callback(update: Update, context: ContextTypes.DEFAULT_T
     """
     Обрабатывает обратный вызов от заполненной анкеты (возможно, будет реализовано через веб-хук).
     """
+    survey_logger.info("Получен callback о заполнении анкеты")
     user = update.effective_user
+    survey_logger.info(f"Обработка callback от пользователя {user.id}")
     
     db = SessionLocal()
     try:
@@ -189,15 +199,22 @@ async def handle_survey_callback(update: Update, context: ContextTypes.DEFAULT_T
         if not user_profile:
             survey_logger.error(f"Не удалось получить профиль пользователя {user.id} для обработки заполнения анкеты")
             return
-            
+        
+        survey_logger.info(f"Получен профиль пользователя {user_profile.id}, отмечаем анкету как заполненную")    
         # Отмечаем анкету как заполненную
         mark_survey_completed(db, user_profile.id)
         
         # Благодарим пользователя
-        await context.bot.send_message(
-            chat_id=user.id,
-            text="Спасибо за заполнение анкеты! Теперь я смогу давать тебе более подходящие рекомендации. 😊"
-        )
+        try:
+            survey_logger.info(f"Отправка благодарственного сообщения пользователю {user.id}")
+            await context.bot.send_message(
+                chat_id=user.id,
+                text="Спасибо за заполнение анкеты! Теперь я смогу давать тебе более подходящие рекомендации. 😊"
+            )
+            survey_logger.info(f"Благодарственное сообщение успешно отправлено пользователю {user.id}")
+        except Exception as e:
+            survey_logger.error(f"Ошибка при отправке благодарственного сообщения: {e}", exc_info=True)
+            # Не выбрасываем исключение, чтобы завершить обработку
         
         survey_logger.info(f"Анкета пользователя {user.id} отмечена как заполненная")
     except Exception as e:
@@ -213,24 +230,29 @@ def schedule_survey_reminders(scheduler, application):
         scheduler: Планировщик задач
         application: Экземпляр приложения Telegram бота
     """
-    # Создаем функцию-обертку для передачи application в context
-    async def send_survey_reminder_wrapper():
-        # Создаем контекст для вызова обработчика
-        context = ContextTypes.DEFAULT_TYPE(
-            application=application,
-            chat_data=None,
-            user_data=None,
-            bot_data=None,
-            job=None
+    try:
+        # Создаем функцию-обертку для передачи application в context
+        async def send_survey_reminder_wrapper():
+            survey_logger.info("Запуск отправки напоминаний об анкете через планировщик")
+            # Создаем контекст для вызова обработчика
+            context = ContextTypes.DEFAULT_TYPE(
+                application=application,
+                chat_data=None,
+                user_data=None,
+                bot_data=None,
+                job=None
+            )
+            await send_survey_reminder(context)
+        
+        # Добавляем задачу в планировщик
+        scheduler.add_job(
+            lambda: asyncio.create_task(send_survey_reminder_wrapper()),
+            'cron', 
+            hour=15,  # Отправляем напоминания в 15:00
+            minute=1,
+            id='survey_reminder',
+            replace_existing=True  # Заменяем существующую задачу, если она есть
         )
-        await send_survey_reminder(context)
-    
-    # Добавляем задачу в планировщик
-    scheduler.add_job(
-        lambda: asyncio.create_task(send_survey_reminder_wrapper()),
-        'cron', 
-        hour=15,  # Отправляем напоминания в 15:00
-        minute=1,
-        id='survey_reminder'
-    )
-    survey_logger.info("Задача отправки напоминаний об анкете добавлена в планировщик") 
+        survey_logger.info("Задача отправки напоминаний об анкете добавлена в планировщик")
+    except Exception as e:
+        survey_logger.error(f"Ошибка при добавлении задачи напоминаний в планировщик: {e}", exc_info=True) 
