@@ -64,7 +64,7 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
         
         # Создаем кнопку для перехода к анкете
         keyboard = [
-            [InlineKeyboardButton("Заполнить анкету", url="https://example.com/survey")]  # URL будет заменен на настоящий
+            [InlineKeyboardButton("Заполнить анкету", url=f"http://your-domain.com/survey?telegram_id={user.id}")]  # URL будет заменен на настоящий
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -141,7 +141,7 @@ async def send_survey_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
                 
                 # Создаем кнопку для перехода к анкете
                 keyboard = [
-                    [InlineKeyboardButton("Заполнить анкету", url="https://example.com/survey")]  # URL будет заменен на настоящий
+                    [InlineKeyboardButton("Заполнить анкету", url=f"http://your-domain.com/survey?telegram_id={user.telegram_id}")]  # URL будет заменен на настоящий
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 
