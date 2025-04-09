@@ -11,6 +11,10 @@ db_logger = logging.getLogger(__name__)
 
 # Глобальная переменная для отслеживания инициализации БД
 _DB_INITIALIZED = False
+# Глобальные переменные для движка БД и базового класса
+_ENGINE = None
+_SESSION_LOCAL = None
+_BASE = None
 
 # Database configuration
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -23,17 +27,35 @@ db_logger.info(f"Setting up database connection to: {SQLALCHEMY_DATABASE_URL}")
 db_path = SQLALCHEMY_DATABASE_URL.replace("sqlite:///", "")
 db_logger.info(f"Database file will be created at: {os.path.abspath(db_path)}")
 
-# Create engine
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, 
-    connect_args={"check_same_thread": False}  # Needed for SQLite
-)
+# Create engine and other SQLAlchemy objects only once
+def get_engine():
+    global _ENGINE
+    if _ENGINE is None:
+        db_logger.info("Creating new database engine")
+        _ENGINE = create_engine(
+            SQLALCHEMY_DATABASE_URL, 
+            connect_args={"check_same_thread": False}  # Needed for SQLite
+        )
+    return _ENGINE
 
-# Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def get_session_local():
+    global _SESSION_LOCAL
+    if _SESSION_LOCAL is None:
+        db_logger.info("Creating new SessionLocal")
+        _SESSION_LOCAL = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
+    return _SESSION_LOCAL
 
-# Create base class for models
-Base = declarative_base()
+def get_base():
+    global _BASE
+    if _BASE is None:
+        db_logger.info("Creating new declarative base")
+        _BASE = declarative_base()
+    return _BASE
+
+# Создаем объекты при импорте модуля
+engine = get_engine()
+SessionLocal = get_session_local()
+Base = get_base()
 
 def init_db():
     """

@@ -25,6 +25,21 @@ class ActionType(enum.Enum):
     SUBMIT_RATING = "submit_rating"
     HEALTH_CHECK = "health_check"  # New action type for health checks
 
+class UserConversation(Base):
+    """Модель для хранения истории разговоров пользователя с ботом"""
+    __tablename__ = 'user_conversations'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('client_profiles.id'), nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    # Храним сообщения в формате JSON: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+    messages = Column(JSON, nullable=False, default=list)
+    
+    # Отношения - перенесем в конец класса ClientProfile
+    
+    def __repr__(self):
+        return f"<UserConversation(user_id={self.user_id}, timestamp={self.timestamp})>"
+
 class ClientProfile(Base):
     __tablename__ = "client_profiles"
 
@@ -41,12 +56,14 @@ class ClientProfile(Base):
     # Relationships
     sessions = relationship("UserSession", back_populates="user")
     interactions = relationship("UserInteraction", back_populates="user")
-    conversations = relationship("UserConversation", order_by=UserConversation.timestamp, back_populates="user")
+    conversations = relationship("UserConversation", order_by="UserConversation.timestamp", back_populates="user")
     
     def __repr__(self):
         """String representation of the ClientProfile model"""
         return f"ClientProfile(id={self.id}, telegram_id={self.telegram_id}, username={self.username}, interaction_count={self.interaction_count})"
 
+# Теперь добавляем обратное отношение к UserConversation
+UserConversation.user = relationship("ClientProfile", back_populates="conversations")
 
 class UserSession(Base):
     __tablename__ = "user_sessions"
@@ -139,22 +156,6 @@ class BroadcastMessage(Base):
         return f"<BroadcastMessage(id={self.id}, scheduled_time={self.scheduled_time}, sent={self.sent})>"
 
 models_logger.info("BroadcastMessage model defined")
-
-class UserConversation(Base):
-    """Модель для хранения истории разговоров пользователя с ботом"""
-    __tablename__ = 'user_conversations'
-    
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('client_profiles.id'), nullable=False)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
-    # Храним сообщения в формате JSON: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
-    messages = Column(JSON, nullable=False, default=list)
-    
-    # Отношения
-    user = relationship("ClientProfile", back_populates="conversations")
-    
-    def __repr__(self):
-        return f"<UserConversation(user_id={self.user_id}, timestamp={self.timestamp})>"
 
 # Ensure all models are registered with Base metadata if needed elsewhere
 # For example, if you have a Base = declarative_base() line earlier, ensure this model uses it.
