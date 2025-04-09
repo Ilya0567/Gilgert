@@ -74,6 +74,13 @@ def post_receive():
 def survey():
     return render_template('mini_app/survey.html')
 
+# Альтернативный маршрут для доступа к анкете напрямую
+@app.route('/survey-direct')
+def survey_direct():
+    with open('templates/mini_app/survey.html', 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    return html_content
+
 # Статические файлы из mini_app
 @app.route('/mini_app/<path:path>')
 def send_mini_app(path):
