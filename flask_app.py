@@ -367,6 +367,7 @@ def get_diagnosis_name(code):
 def post_receive_webhook():
     app.logger.info("Получен вебхук от Git")
     
+    
     try:
         # Проверка origin запроса (можно добавить секретный ключ)
         # request.headers.get('X-Hub-Signature')
