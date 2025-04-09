@@ -14,6 +14,12 @@ async def product_user_message(update: Update, context: ContextTypes.DEFAULT_TYP
     Состояние CHECK_PRODUCT: пользователь вводит название продукта,
     бот проверяет и отвечает.
     """
+    # Инициализируем структуры данных, если они отсутствуют
+    if 'user_data' not in context:
+        context.user_data = {}
+    if 'state' not in context.user_data:
+        context.user_data['state'] = CHECK_PRODUCT
+
     product = update.message.text
     user_name = update.message.from_user.username or update.message.from_user.full_name
 

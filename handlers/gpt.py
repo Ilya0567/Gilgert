@@ -17,6 +17,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     Обрабатывает все текстовые сообщения пользователя через GPT,
     если не активно другое состояние (проверка продукта и т.д.)
     """
+    # Инициализируем структуры данных, если они отсутствуют
+    if 'user_data' not in context:
+        context.user_data = {}
+    if 'state' not in context.user_data:
+        context.user_data['state'] = MENU
+        
     # Если активно другое состояние, не обрабатываем сообщение через GPT
     current_state = context.user_data.get('state')
     if current_state in [CHECK_PRODUCT, RECIPES]:

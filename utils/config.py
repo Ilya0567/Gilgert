@@ -17,3 +17,11 @@ CHAT_ID = "-1002051079352"
 ADMIN_IDS = [
     "669201758",  # @betsu
 ]
+
+# Настройки webhook для работы без перезапуска
+WEBHOOK_URL = "https://your-domain.com"  # Замените на ваш домен
+WEBHOOK_PORT = 8443  # Стандартный порт для webhook
+WEBHOOK_PATH = f"/bot{TOKEN_BOT}"  # Путь для webhook
+
+# Для запуска в режиме webhook используйте:
+# python assistant.py --webhook

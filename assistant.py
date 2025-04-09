@@ -248,6 +248,12 @@ async def handle_emoji_response(update: Update, context: ContextTypes.DEFAULT_TY
     user = query.from_user
     user_name = user.first_name if user.first_name else "пользователь"
     
+    # Создаем ключевые структуры данных, если они отсутствуют
+    if 'user_data' not in context:
+        context.user_data = {}
+    if 'state' not in context.user_data:
+        context.user_data['state'] = MENU
+    
     # Сохраняем реакцию в базу данных
     db = SessionLocal()
     try:
@@ -259,6 +265,9 @@ async def handle_emoji_response(update: Update, context: ContextTypes.DEFAULT_TY
             first_name=user.first_name,
             last_name=user.last_name
         )
+        
+        # Сохраняем обновленный профиль в контексте
+        context.user_data['user_profile'] = user_profile
         
         # Сохраняем реакцию
         add_health_check(db=db, user_id=user_profile.id, mood=mood)
@@ -414,6 +423,48 @@ def main():
         bot_logger.info("Daily messages scheduled")
 
         bot_logger.info("Starting polling...")
+        
+        # Добавляем обработчик для всех текстовых сообщений вне ConversationHandler
+        # Если пользователь пишет сообщение без вызова /start, бот ответит как если бы команда была вызвана
+        bot_logger.info("Adding fallback message handler for non-conversation messages...")
+        
+        async def fallback_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Обрабатывает текстовые сообщения вне ConversationHandler (когда бот перезапущен)"""
+            bot_logger.info(f"Received message outside of conversation from user {update.effective_user.id}")
+            
+            # Создаем ключевые структуры данных, если они отсутствуют
+            if 'user_data' not in context:
+                context.user_data = {}
+            if 'state' not in context.user_data:
+                context.user_data['state'] = MENU
+                
+            user = update.effective_user
+            if update.message and update.message.text.strip().lower() in ['привет', 'начать', 'старт', 'меню', '/start']:
+                # Если это приветственное сообщение, показываем стартовое меню
+                return await start_menu(update, context)
+            else:
+                # Иначе обрабатываем как обычный запрос через GPT
+                bot_logger.info(f"Processing message as GPT query: '{update.message.text}'")
+                return await handle_message(update, context)
+        
+        # Добавляем обработчик с низким приоритетом, чтобы он не перехватывал сообщения внутри ConversationHandler
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, fallback_text_handler), group=1)
+        bot_logger.info("Fallback text handler added")
+        
+        # Обработчик неизвестных команд
+        async def unknown_command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Обрабатывает неизвестные команды вне ConversationHandler"""
+            bot_logger.info(f"Received unknown command from user {update.effective_user.id}: {update.message.text}")
+            
+            # Предлагаем пользователю перейти к началу взаимодействия
+            await update.message.reply_text(
+                "Извини, я не знаю эту команду. Напиши /start, чтобы начать общение, или просто задай мне вопрос! 😊"
+            )
+        
+        # Добавляем обработчик для неизвестных команд с самым низким приоритетом
+        application.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler), group=2)
+        bot_logger.info("Unknown command handler added")
+        
         application.run_polling(allowed_updates=Update.ALL_TYPES)
         bot_logger.info("Bot stopped")
         
