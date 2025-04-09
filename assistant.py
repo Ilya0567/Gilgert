@@ -374,7 +374,7 @@ def main():
         bot_logger.info("Initializing database...")
         init_db()
         bot_logger.info("Database initialized successfully")
-        
+
         # Обработчик сигналов для плавного завершения
         def signal_handler(sig, frame):
             bot_logger.info(f"Received signal {sig}, shutting down gracefully...")
@@ -689,7 +689,7 @@ if __name__ == "__main__":
         f.write(str(os.getpid()))
     
     try:
-        main()
+    main()
     finally:
         # Удаляем файл блокировки при завершении
         if os.path.exists(lock_file):

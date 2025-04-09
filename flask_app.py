@@ -1,9 +1,10 @@
-from flask import Flask, request, jsonify, send_file, abort, logging, send_from_directory
+from flask import Flask, request, jsonify, send_file, abort, send_from_directory
 import os
 import sqlite3
 import subprocess
 from datetime import datetime
 from flask import render_template
+import logging  # добавляем стандартный модуль логирования
 
 app = Flask(__name__)
 
