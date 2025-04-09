@@ -74,9 +74,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     reply_markup=reply_markup
                 )
                 
-                # Устанавливаем состояние RECIPES для следующего обработчика
-                context.user_data['state'] = RECIPES
-                return RECIPES
+                # Не меняем состояние, чтобы пользователь мог продолжать общаться с ботом
+                # Просто добавляем флаг, что меню рецептов активно
+                context.user_data['recipes_menu_active'] = True
+                return MENU
         
         # Обычный ответ (не вызов функции)
         # Добавляем ответ в историю

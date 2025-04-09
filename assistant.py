@@ -347,7 +347,7 @@ def main():
             entry_points=[CommandHandler("start", start_menu)],
             states={
                 MENU: [
-                    CallbackQueryHandler(menu_callback, pattern="^(about|check_product|healthy_recipes|back_to_menu)$"),
+                    CallbackQueryHandler(menu_callback, pattern="^(about|check_product|healthy_recipes|back_to_menu|breakfast|poldnik|lunch|dinner|bcat_.*|bitem_.*|pcat_.*|pitem_.*|lcat_.*|litem_.*|dcat_.*|ditem_.*|rate_recipe|rating_.*|ignore_rating)$"),
                     MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)  # Обработка всех текстовых сообщений через GPT
                 ],
                 CHECK_PRODUCT: [

@@ -100,6 +100,13 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, call
         )
         return RECIPES
 
+    # Обрабатываем callback_query от кнопок меню рецептов, но остаемся в меню MENU
+    # Это позволяет взаимодействовать с кнопками без переключения состояния
+    elif data in ["breakfast", "poldnik", "lunch", "dinner"] or data.startswith(("bcat_", "bitem_", "pcat_", "pitem_", "lcat_", "litem_", "dcat_", "ditem_")):
+        from handlers.recipes import recipes_callback
+        await recipes_callback(update, context)
+        return MENU
+
     elif data == 'back_to_menu':
         return await start_menu(update, context)
 
