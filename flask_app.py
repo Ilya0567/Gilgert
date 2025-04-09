@@ -363,6 +363,7 @@ def get_diagnosis_name(code):
     }
     return diagnoses.get(code, code)
 
+
 # Обработчик вебхуков от GitHub/GitLab для обновления кода
 @app.route('/post-receive', methods=['POST'])
 def post_receive():
