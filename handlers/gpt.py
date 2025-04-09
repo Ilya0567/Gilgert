@@ -6,7 +6,7 @@ from telegram.ext import ContextTypes
 from utils.states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
 from utils import gpt_35
 from utils.config import OPENAI_API_KEY
-from handlers.menu import menu_callback
+from handlers.recipes import recipes_callback
 
 logger = logging.getLogger(__name__)
 
@@ -53,21 +53,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Обработка вызова функции показа рецептов
             if function_name == "show_healthy_recipes":
                 logger.info(f"Function call detected: {function_name}")
-                # Имитируем нажатие на кнопку "healthy_recipes"
-                dummy_callback_query = type('obj', (object,), {
-                    'data': 'healthy_recipes',
-                    'message': update.message,
-                    'answer': lambda *args, **kwargs: None,
-                    'edit_message_text': lambda text, reply_markup: update.message.reply_text(text=text, reply_markup=reply_markup)
-                })
                 
                 # Создаем сообщение о переходе к рецептам
                 await update.message.reply_text(
                     "Отлично! Сейчас покажу тебе наши здоровые рецепты 🥗"
                 )
                 
-                # Вызываем обработчик меню для перехода к рецептам
-                return await menu_callback(update, context, callback_query=dummy_callback_query)
+                # Отправляем меню рецептов напрямую
+                keyboard = [
+                    [InlineKeyboardButton("Завтраки", callback_data="breakfast")],
+                    [InlineKeyboardButton("Полдники", callback_data="poldnik")],
+                    [InlineKeyboardButton("Обеды", callback_data="lunch")],
+                    [InlineKeyboardButton("Ужины", callback_data="dinner")],
+                    [InlineKeyboardButton("Назад", callback_data='back_to_menu')]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await update.message.reply_text(
+                    text="Выберите прием пищи:",
+                    reply_markup=reply_markup
+                )
+                
+                # Устанавливаем состояние RECIPES для следующего обработчика
+                context.user_data['state'] = RECIPES
+                return RECIPES
         
         # Обычный ответ (не вызов функции)
         # Добавляем ответ в историю
