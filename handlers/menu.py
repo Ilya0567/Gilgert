@@ -98,7 +98,8 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, call
                 [InlineKeyboardButton("Назад", callback_data='back_to_menu')]
             ])
         )
-        return RECIPES
+        # Остаемся в MENU вместо перехода в RECIPES, чтобы можно было писать сообщения
+        return MENU
 
     # Обрабатываем callback_query от кнопок меню рецептов, но остаемся в меню MENU
     # Это позволяет взаимодействовать с кнопками без переключения состояния
