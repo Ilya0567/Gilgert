@@ -381,49 +381,6 @@ def main():
         application.add_handler(CommandHandler("table_broadcasts", table_broadcasts))
         bot_logger.info("Table handlers configured")
 
-        # ConversationHandler описывает сценарий общения бота с пользователем.
-        bot_logger.info("Configuring conversation handler...")
-        conv_handler = ConversationHandler(
-            entry_points=[CommandHandler("start", start_menu)],
-            states={
-                MENU: [
-                    CallbackQueryHandler(menu_callback, pattern="^(about|check_product|healthy_recipes|back_to_menu|breakfast|poldnik|lunch|dinner|bcat_.*|bitem_.*|pcat_.*|pitem_.*|lcat_.*|litem_.*|dcat_.*|ditem_.*|rate_recipe|rating_.*|ignore_rating|category_.*|dish_.*|drinks|drinks_cat_.*|drinks_name_.*)$"),
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)  # Обработка всех текстовых сообщений через GPT
-                ],
-                CHECK_PRODUCT: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, product_user_message),
-                    CallbackQueryHandler(menu_callback, pattern="^back_to_menu$")
-                ],
-                RECIPES: [
-                    CallbackQueryHandler(recipes_callback)
-                ],
-            },
-            fallbacks=[CommandHandler("cancel", cancel)],
-            allow_reentry=True,
-            name="main_conversation"  # Добавим имя для отладки
-        )
-        bot_logger.info("Adding conversation handler to application...")
-        application.add_handler(conv_handler)
-        bot_logger.info("Conversation handler added")
-
-        bot_logger.info("Setting up emoji response handler...")
-        # Добавляем обработчик для нажатий на эмодзи
-        application.add_handler(CallbackQueryHandler(handle_emoji_response, pattern="^(very_sad|sad|neutral|good|very_good)$"))
-        bot_logger.info("Emoji handler configured")
-
-        bot_logger.info("Configuring job queue...")
-        # Настраиваем проверку рассылок каждую минуту
-        job_queue = application.job_queue
-        job_queue.run_repeating(process_broadcasts, interval=60)
-        bot_logger.info("Job queue configured")
-
-        bot_logger.info("Setting up daily messages...")
-        # Вызов функции schedule_daily_message в main()
-        schedule_daily_message(application)
-        bot_logger.info("Daily messages scheduled")
-
-        bot_logger.info("Starting polling...")
-        
         # Добавляем обработчик для всех текстовых сообщений вне ConversationHandler
         # Если пользователь пишет сообщение без вызова /start, бот ответит как если бы команда была вызвана
         bot_logger.info("Adding fallback message handler for non-conversation messages...")
@@ -447,23 +404,76 @@ def main():
                 bot_logger.info(f"Processing message as GPT query: '{update.message.text}'")
                 return await handle_message(update, context)
         
-        # Добавляем обработчик с низким приоритетом, чтобы он не перехватывал сообщения внутри ConversationHandler
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, fallback_text_handler), group=1)
-        bot_logger.info("Fallback text handler added")
-        
         # Обработчик неизвестных команд
         async def unknown_command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """Обрабатывает неизвестные команды вне ConversationHandler"""
             bot_logger.info(f"Received unknown command from user {update.effective_user.id}: {update.message.text}")
             
+            # Создаем ключевые структуры данных, если они отсутствуют
+            if 'user_data' not in context:
+                context.user_data = {}
+            if 'state' not in context.user_data:
+                context.user_data['state'] = MENU
+            
             # Предлагаем пользователю перейти к началу взаимодействия
             await update.message.reply_text(
                 "Извини, я не знаю эту команду. Напиши /start, чтобы начать общение, или просто задай мне вопрос! 😊"
             )
+            
+            return MENU
         
-        # Добавляем обработчик для неизвестных команд с самым низким приоритетом
-        application.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler), group=2)
+        # Добавляем обработчики до основного ConversationHandler
+        # Это важно, так как ConversationHandler имеет приоритет над обычными обработчиками
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, fallback_text_handler), group=1)
+        bot_logger.info("Fallback text handler added")
+        
+        # Добавляем обработчик для неизвестных команд с тем же приоритетом
+        application.add_handler(MessageHandler(filters.COMMAND & ~filters.COMMAND("start"), unknown_command_handler), group=1)
         bot_logger.info("Unknown command handler added")
+
+        # ConversationHandler описывает сценарий общения бота с пользователем.
+        bot_logger.info("Configuring conversation handler...")
+        conv_handler = ConversationHandler(
+            entry_points=[CommandHandler("start", start_menu)],
+            states={
+                MENU: [
+                    CallbackQueryHandler(menu_callback, pattern="^(about|check_product|healthy_recipes|back_to_menu|breakfast|poldnik|lunch|dinner|bcat_.*|bitem_.*|pcat_.*|pitem_.*|lcat_.*|litem_.*|dcat_.*|ditem_.*|rate_recipe|rating_.*|ignore_rating|category_.*|dish_.*|drinks|drinks_cat_.*|drinks_name_.*)$"),
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)  # Обработка всех текстовых сообщений через GPT
+                ],
+                CHECK_PRODUCT: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, product_user_message),
+                    CallbackQueryHandler(menu_callback, pattern="^back_to_menu$")
+                ],
+                RECIPES: [
+                    CallbackQueryHandler(recipes_callback)
+                ],
+            },
+            fallbacks=[CommandHandler("cancel", cancel)],
+            allow_reentry=True,
+            name="main_conversation",  # Добавим имя для отладки
+            persistent=True  # Включаем сохранение состояния между перезапусками
+        )
+        bot_logger.info("Adding conversation handler to application...")
+        application.add_handler(conv_handler)
+        bot_logger.info("Conversation handler added")
+
+        bot_logger.info("Setting up emoji response handler...")
+        # Добавляем обработчик для нажатий на эмодзи
+        application.add_handler(CallbackQueryHandler(handle_emoji_response, pattern="^(very_sad|sad|neutral|good|very_good)$"))
+        bot_logger.info("Emoji handler configured")
+
+        bot_logger.info("Configuring job queue...")
+        # Настраиваем проверку рассылок каждую минуту
+        job_queue = application.job_queue
+        job_queue.run_repeating(process_broadcasts, interval=60)
+        bot_logger.info("Job queue configured")
+
+        bot_logger.info("Setting up daily messages...")
+        # Вызов функции schedule_daily_message в main()
+        schedule_daily_message(application)
+        bot_logger.info("Daily messages scheduled")
+
+        bot_logger.info("Starting polling...")
         
         application.run_polling(allowed_updates=Update.ALL_TYPES)
         bot_logger.info("Bot stopped")
