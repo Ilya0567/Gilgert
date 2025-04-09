@@ -15,18 +15,32 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
     """
     user = update.effective_user
     
-    # Получаем профиль пользователя
-    user_profile = context.user_data.get('user_profile')
-    
-    if not user_profile:
-        survey_logger.error(f"Не удалось получить профиль пользователя {user.id} для отправки приглашения анкеты")
-        return
-
-    survey_logger.info(f"Отправка приглашения заполнить анкету пользователю {user.id}")
-    
     # Создаем сессию БД
     db = SessionLocal()
     try:
+        # Получаем профиль пользователя из контекста или из базы данных
+        user_profile = context.user_data.get('user_profile')
+        
+        if not user_profile:
+            # Если профиль не найден в контексте, попробуем получить его из базы данных
+            survey_logger.info(f"Профиль пользователя {user.id} не найден в контексте, получаем из базы данных")
+            from database.database import get_or_create_user
+            user_profile = get_or_create_user(
+                db=db,
+                telegram_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name
+            )
+            # Сохраняем профиль в контексте
+            context.user_data['user_profile'] = user_profile
+        
+        if not user_profile:
+            survey_logger.error(f"Не удалось получить профиль пользователя {user.id} для отправки приглашения анкеты")
+            return
+
+        survey_logger.info(f"Отправка приглашения заполнить анкету пользователю {user.id} (профиль: {user_profile.id})")
+        
         # Проверяем и обновляем статус анкеты
         survey_status = get_or_create_survey_status(db, user_profile.id)
         
@@ -54,14 +68,38 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        # Отправляем сообщение
-        await context.bot.send_message(
-            chat_id=user.id,
-            text=message,
-            reply_markup=reply_markup
-        )
-        
-        survey_logger.info(f"Приглашение заполнить анкету успешно отправлено пользователю {user.id}")
+        # Отправляем сообщение, учитывая разные контексты
+        try:
+            # Если обновление пришло из callback_query и это не первое сообщение
+            if update.callback_query and not update.callback_query.message.text:
+                # Отправляем новое сообщение
+                await context.bot.send_message(
+                    chat_id=user.id,
+                    text=message,
+                    reply_markup=reply_markup
+                )
+            else:
+                # Отправляем обычное сообщение
+                await context.bot.send_message(
+                    chat_id=user.id,
+                    text=message,
+                    reply_markup=reply_markup
+                )
+                
+            survey_logger.info(f"Приглашение заполнить анкету успешно отправлено пользователю {user.id}")
+        except Exception as e:
+            survey_logger.error(f"Ошибка при отправке сообщения с приглашением: {e}", exc_info=True)
+            # Пытаемся отправить сообщение другим способом
+            try:
+                await context.bot.send_message(
+                    chat_id=user.id,
+                    text=message,
+                    reply_markup=reply_markup
+                )
+                survey_logger.info(f"Приглашение отправлено альтернативным способом пользователю {user.id}")
+            except Exception as e2:
+                survey_logger.error(f"Не удалось отправить приглашение альтернативным способом: {e2}", exc_info=True)
+            
     except Exception as e:
         survey_logger.error(f"Ошибка при отправке приглашения анкеты пользователю {user.id}: {e}", exc_info=True)
     finally:
@@ -129,15 +167,29 @@ async def handle_survey_callback(update: Update, context: ContextTypes.DEFAULT_T
     """
     user = update.effective_user
     
-    # Получаем профиль пользователя
-    user_profile = context.user_data.get('user_profile')
-    
-    if not user_profile:
-        survey_logger.error(f"Не удалось получить профиль пользователя {user.id} для обработки заполнения анкеты")
-        return
-        
     db = SessionLocal()
     try:
+        # Получаем профиль пользователя из контекста или из базы данных
+        user_profile = context.user_data.get('user_profile')
+        
+        if not user_profile:
+            # Если профиль не найден в контексте, попробуем получить его из базы данных
+            survey_logger.info(f"Профиль пользователя {user.id} не найден в контексте, получаем из базы данных")
+            from database.database import get_or_create_user
+            user_profile = get_or_create_user(
+                db=db,
+                telegram_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name
+            )
+            # Сохраняем профиль в контексте
+            context.user_data['user_profile'] = user_profile
+            
+        if not user_profile:
+            survey_logger.error(f"Не удалось получить профиль пользователя {user.id} для обработки заполнения анкеты")
+            return
+            
         # Отмечаем анкету как заполненную
         mark_survey_completed(db, user_profile.id)
         
@@ -153,14 +205,31 @@ async def handle_survey_callback(update: Update, context: ContextTypes.DEFAULT_T
     finally:
         db.close()
 
-def schedule_survey_reminders(scheduler):
+def schedule_survey_reminders(scheduler, application):
     """
     Добавляет задачу отправки напоминаний о заполнении анкеты в планировщик.
+    
+    Args:
+        scheduler: Планировщик задач
+        application: Экземпляр приложения Telegram бота
     """
+    # Создаем функцию-обертку для передачи application в context
+    async def send_survey_reminder_wrapper():
+        # Создаем контекст для вызова обработчика
+        context = ContextTypes.DEFAULT_TYPE(
+            application=application,
+            chat_data=None,
+            user_data=None,
+            bot_data=None,
+            job=None
+        )
+        await send_survey_reminder(context)
+    
+    # Добавляем задачу в планировщик
     scheduler.add_job(
-        send_survey_reminder,
+        lambda: asyncio.create_task(send_survey_reminder_wrapper()),
         'cron', 
-        hour=15,  # Отправляем напоминания в 12:00
+        hour=15,  # Отправляем напоминания в 15:00
         minute=1,
         id='survey_reminder'
     )

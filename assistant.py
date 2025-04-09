@@ -325,7 +325,7 @@ def main():
     )
     
     # Добавляем планирование задачи напоминаний об анкете
-    schedule_survey_reminders(scheduler)
+    schedule_survey_reminders(scheduler, application)
     
     # Запускаем планировщик
     scheduler.start()
