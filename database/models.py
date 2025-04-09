@@ -157,6 +157,24 @@ class BroadcastMessage(Base):
 
 models_logger.info("BroadcastMessage model defined")
 
+class UserSurveyStatus(Base):
+    __tablename__ = "user_survey_status"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("client_profiles.id"), nullable=False)
+    is_completed = Column(Boolean, default=False)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    last_reminder_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Отношение к пользователю
+    user = relationship("ClientProfile")
+
+    def __repr__(self):
+        return f"<UserSurveyStatus(user_id={self.user_id}, is_completed={self.is_completed})>"
+
+models_logger.info("UserSurveyStatus model defined")
+
 # Ensure all models are registered with Base metadata if needed elsewhere
 # For example, if you have a Base = declarative_base() line earlier, ensure this model uses it.
 # If Base is imported, ensure it's correctly configured.

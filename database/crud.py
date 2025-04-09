@@ -1,7 +1,7 @@
 # crud.py
 
 from sqlalchemy.orm import Session
-from .models import ClientProfile, RecipeRating, DailyHealthCheck, BroadcastMessage
+from .models import ClientProfile, RecipeRating, DailyHealthCheck, BroadcastMessage, UserSurveyStatus
 from database.models import UserConversation
 import logging
 from datetime import datetime, timedelta
@@ -263,32 +263,148 @@ def get_user_conversation_history(db: Session, user_id: int, limit: int = 20):
 
 def update_conversation_history(db: Session, user_id: int, messages: list):
     """
-    Обновляет историю диалога пользователя или создает новую, если не существует
+    Updates the most recent conversation history for a user with new messages.
+    
+    Args:
+        db: Database session
+        user_id: The ID of the user
+        messages: List of message dicts to append
+    
+    Returns:
+        The updated UserConversation object
+    """
+    # Find the most recent conversation for this user
+    conversation = (
+        db.query(UserConversation)
+        .filter(UserConversation.user_id == user_id)
+        .order_by(UserConversation.timestamp.desc())
+        .first()
+    )
+    
+    # If conversation exists, update it
+    if conversation:
+        conversation.messages = messages
+        db.commit()
+        db.refresh(conversation)
+        return conversation
+    
+    # Otherwise create a new conversation
+    return save_conversation_history(db, user_id, messages)
+
+# Функции для работы с анкетами пользователей
+
+def get_user_survey_status(db: Session, user_id: int) -> UserSurveyStatus:
+    """
+    Получает статус заполнения анкеты пользователем
     
     Args:
         db: Сессия базы данных
         user_id: ID пользователя
-        messages: Список сообщений в формате для отправки в GPT API
-    """
-    try:
-        # Находим последнюю запись
-        conversation = db.query(UserConversation)\
-            .filter(UserConversation.user_id == user_id)\
-            .order_by(UserConversation.timestamp.desc())\
-            .first()
         
-        if conversation:
-            # Обновляем существующую запись
-            conversation.messages = messages
-            db.commit()
-            db.refresh(conversation)
-            logger.info(f"Updated conversation history for user {user_id}")
-            return conversation
-        else:
-            # Создаем новую запись
-            logger.info(f"Creating new conversation history for user {user_id}")
-            return save_conversation_history(db, user_id, messages)
-    except Exception as e:
-        logger.error(f"Error updating conversation history: {e}")
-        db.rollback()
-        return None 
+    Returns:
+        Объект статуса анкеты или None если записи нет
+    """
+    return db.query(UserSurveyStatus).filter(UserSurveyStatus.user_id == user_id).first()
+
+def get_or_create_survey_status(db: Session, user_id: int) -> UserSurveyStatus:
+    """
+    Получает или создает запись о статусе анкеты пользователя
+    
+    Args:
+        db: Сессия базы данных
+        user_id: ID пользователя
+        
+    Returns:
+        Объект статуса анкеты
+    """
+    survey_status = get_user_survey_status(db, user_id)
+    
+    if not survey_status:
+        survey_status = UserSurveyStatus(
+            user_id=user_id,
+            is_completed=False
+        )
+        db.add(survey_status)
+        db.commit()
+        db.refresh(survey_status)
+        logger.info(f"Создан новый статус анкеты для пользователя {user_id}")
+    
+    return survey_status
+
+def mark_survey_completed(db: Session, user_id: int) -> UserSurveyStatus:
+    """
+    Отмечает анкету пользователя как заполненную
+    
+    Args:
+        db: Сессия базы данных
+        user_id: ID пользователя
+        
+    Returns:
+        Обновленный объект статуса анкеты
+    """
+    survey_status = get_or_create_survey_status(db, user_id)
+    
+    survey_status.is_completed = True
+    survey_status.completed_at = datetime.now()
+    db.commit()
+    db.refresh(survey_status)
+    
+    logger.info(f"Анкета пользователя {user_id} отмечена как заполненная")
+    return survey_status
+
+def update_survey_reminder(db: Session, user_id: int) -> UserSurveyStatus:
+    """
+    Обновляет время последнего напоминания о заполнении анкеты
+    
+    Args:
+        db: Сессия базы данных
+        user_id: ID пользователя
+        
+    Returns:
+        Обновленный объект статуса анкеты
+    """
+    survey_status = get_or_create_survey_status(db, user_id)
+    
+    survey_status.last_reminder_at = datetime.now()
+    db.commit()
+    db.refresh(survey_status)
+    
+    logger.info(f"Обновлено время напоминания об анкете для пользователя {user_id}")
+    return survey_status
+
+def get_users_needing_survey_reminder(db: Session, days_since_reminder: int = 1) -> list[ClientProfile]:
+    """
+    Получает список пользователей, которым нужно отправить напоминание о заполнении анкеты
+    
+    Args:
+        db: Сессия базы данных
+        days_since_reminder: Количество дней с момента последнего напоминания
+        
+    Returns:
+        Список объектов пользователей
+    """
+    cutoff_time = datetime.now() - timedelta(days=days_since_reminder)
+    
+    # Пользователи с записью о статусе анкеты, которые её не заполнили и последнее напоминание было давно или его не было
+    users_with_status = (
+        db.query(ClientProfile)
+        .join(UserSurveyStatus, ClientProfile.id == UserSurveyStatus.user_id)
+        .filter(
+            UserSurveyStatus.is_completed == False,
+            or_(
+                UserSurveyStatus.last_reminder_at == None,
+                UserSurveyStatus.last_reminder_at < cutoff_time
+            )
+        )
+        .all()
+    )
+    
+    # Пользователи без записи о статусе анкеты (потенциально новые пользователи)
+    users_without_status = (
+        db.query(ClientProfile)
+        .outerjoin(UserSurveyStatus, ClientProfile.id == UserSurveyStatus.user_id)
+        .filter(UserSurveyStatus.id == None)
+        .all()
+    )
+    
+    return users_with_status + users_without_status 

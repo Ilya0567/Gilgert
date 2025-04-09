@@ -4,6 +4,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from utils.states import MENU, GPT_QUESTION, CHECK_PRODUCT, RECIPES
+from handlers.survey import send_survey_invitation
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,10 @@ async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(text=welcome_text, reply_markup=reply_markup)
     elif update.callback_query:
         await update.callback_query.edit_message_text(text=welcome_text, reply_markup=reply_markup)
+    
+    # Отправляем приглашение заполнить анкету (если нужно)
+    await send_survey_invitation(update, context)
+    
     return MENU
 
 

@@ -170,6 +170,8 @@ handle_message = track_user(handle_message)
 product_user_message = track_user(product_user_message)
 recipes_callback = track_user(recipes_callback)
 cancel = track_user(cancel)
+send_survey_invitation = track_user(send_survey_invitation)
+handle_survey_callback = track_user(handle_survey_callback)
 # universal handlers will be decorated after they are defined
 
 from stats_handler import get_stats
@@ -178,6 +180,7 @@ from handlers.stats import stats_recipes, stats_health, stats_users, stats_help
 
 from handlers.broadcast import get_broadcast_handler, process_broadcasts
 from handlers.admin import admin_commands
+from handlers.survey import send_survey_invitation, schedule_survey_reminders, handle_survey_callback
 
 async def send_daily_message(context, chat_id):
     """Отправляет ежедневное сообщение пользователям."""
@@ -290,9 +293,43 @@ async def handle_emoji_response(update: Update, context: ContextTypes.DEFAULT_TY
         db.close()
 
 def main():
-    """
-    Главная точка входа: создаём приложение, регистрируем ConversationHandler и запускаем бота.
-    """
+    """Основная функция запуска бота."""
+    
+    # Создаем объект персистентности
+    persistence = PicklePersistence(
+        filepath="bot_data",
+        store_data=PersistenceInput(
+            bot_data=True,
+            chat_data=True,
+            user_data=True,
+            callback_data=True,
+        ),
+    )
+    
+    # Инициализируем приложение с токеном и персистентностью
+    application = ApplicationBuilder().token(TOKEN_BOT).persistence(persistence).build()
+    bot_logger.info("Создание планировщика задач")
+    
+    # Создаем и настраиваем планировщик
+    scheduler = AsyncIOScheduler(timezone=pytz.utc)
+    
+    # Добавляем обработку рассылок
+    schedule_daily_message(application)
+    
+    # Добавляем планирование задачи обработки рассылок
+    scheduler.add_job(
+        lambda: asyncio.create_task(process_broadcasts(application)),
+        'interval',
+        minutes=1,  # Проверяем рассылки каждую минуту
+        id='process_broadcasts'
+    )
+    
+    # Добавляем планирование задачи напоминаний об анкете
+    schedule_survey_reminders(scheduler)
+    
+    # Запускаем планировщик
+    scheduler.start()
+    
     bot_logger.info("Starting bot application...")
     
     try:
@@ -302,37 +339,6 @@ def main():
         init_db()
         bot_logger.info("Database initialized successfully")
         
-        # Создаем объект персистентности для сохранения данных между перезапусками
-        persistence_path = 'persistence/data'
-        os.makedirs('persistence', exist_ok=True)
-        
-        try:
-            bot_logger.info("Setting up persistence...")
-            persistence = PicklePersistence(
-                filepath=persistence_path,
-                store_data=PersistenceInput(user_data=True, chat_data=True, bot_data=True, callback_data=True),
-                single_file=True,
-                on_flush=False,
-                update_interval=60  # Сохраняем каждые 60 секунд
-            )
-            bot_logger.info("Persistence setup complete")
-        except Exception as e:
-            bot_logger.error(f"ERROR SETTING UP PERSISTENCE: {e}", exc_info=True)
-            # Fallback to no persistence if there's an error
-            bot_logger.info("Falling back to no persistence...")
-            persistence = None
-        
-        try:
-            bot_logger.info("Building application with persistence...")
-            if persistence:
-                application = ApplicationBuilder().token(TOKEN_BOT).persistence(persistence).build()
-            else:
-                application = ApplicationBuilder().token(TOKEN_BOT).build()
-            bot_logger.info("Application built successfully")
-        except Exception as e:
-            bot_logger.error(f"ERROR BUILDING APPLICATION: {e}", exc_info=True)
-            raise
-
         # Обработчик сигналов для плавного завершения
         def signal_handler(sig, frame):
             bot_logger.info(f"Received signal {sig}, shutting down gracefully...")
@@ -473,6 +479,12 @@ def main():
         # Добавляем обработчик для нажатий на эмодзи
         application.add_handler(CallbackQueryHandler(handle_emoji_response, pattern="^(very_sad|sad|neutral|good|very_good)$"))
         bot_logger.info("Emoji handler configured")
+        
+        bot_logger.info("Setting up survey callback handler...")
+        # Добавляем обработчик для колбэков от анкеты
+        # В будущем здесь будет URL-путь для веб-хука от формы
+        application.add_handler(CommandHandler("survey_completed", handle_survey_callback))
+        bot_logger.info("Survey callback handler configured")
 
         bot_logger.info("Configuring job queue...")
         # Настраиваем проверку рассылок каждую минуту
