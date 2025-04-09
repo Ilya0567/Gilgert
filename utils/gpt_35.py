@@ -82,7 +82,7 @@ FUNCTIONS = [
 ]
 
 class ChatGPTClient:
-    def __init__(self, api_key=None, model="gpt-3.5-turbo", temperature=0.9, max_tokens=2000):
+    def __init__(self, api_key=None, model="gpt-4o-mini", temperature=0.9, max_tokens=2000):
         """
         Инициализация клиента ChatGPT.
 
