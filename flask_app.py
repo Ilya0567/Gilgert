@@ -1,9 +1,9 @@
-from flask import Flask, request, jsonify, send_file
-import logging
+from flask import Flask, request, jsonify, send_file, abort, logging, send_from_directory
 import os
 import sqlite3
 import subprocess
 from datetime import datetime
+from flask import render_template
 
 app = Flask(__name__)
 
@@ -79,18 +79,7 @@ def test_text():
 @app.route('/survey')
 def survey():
     app.logger.info("Запрос к /survey получен")
-    # Прямой путь к файлу
-    html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'survey.html')
-    
-    try:
-        app.logger.info(f"Открываю файл: {html_path}")
-        app.logger.info(f"Файл существует: {os.path.exists(html_path)}")
-        with open(html_path, 'r', encoding='utf-8') as f:
-            html_content = f.read()
-        return html_content
-    except Exception as e:
-        app.logger.error(f"Ошибка при чтении файла: {e}")
-        return f"Ошибка при загрузке анкеты: {e}", 500
+    return render_template('mini_app/survey.html')
 
 # Обработка отправки опросника
 @app.route('/submit-survey', methods=['POST'])
