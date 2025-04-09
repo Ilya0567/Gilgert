@@ -203,10 +203,12 @@ async def handle_survey_callback(update: Update, context: ContextTypes.DEFAULT_T
         # Отмечаем анкету как заполненную
         mark_survey_completed(db, user_profile.id)
         
-        # Отправляем сообщение с благодарностью
-        await update.message.reply_text(
-            "Спасибо за заполнение анкеты! Теперь я смогу давать более точные рекомендации."
+        # Отправляем сообщение с благодарностью - используем send_message вместо reply_text
+        await context.bot.send_message(
+            chat_id=user.id,
+            text="Спасибо за заполнение анкеты! Теперь я смогу давать более точные рекомендации."
         )
+        survey_logger.info(f"Отправлено сообщение с благодарностью пользователю {user.id}")
     except Exception as e:
         survey_logger.error(f"Ошибка при обработке callback анкеты: {e}")
     finally:

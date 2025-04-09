@@ -493,10 +493,11 @@ def main():
         bot_logger.info("Emoji handler configured")
         
         bot_logger.info("Setting up survey callback handler...")
-        # Добавляем обработчик для колбэков от анкеты
-        # В будущем здесь будет URL-путь для веб-хука от формы
+        # Добавляем обработчик для колбэков от анкеты через параметр deep linking
+        application.add_handler(CommandHandler("start", handle_survey_callback, filters=filters.Regex("survey_completed")))
+        # Обработчик для прямой команды (оставляем для совместимости)
         application.add_handler(CommandHandler("survey_completed", handle_survey_callback))
-        bot_logger.info("Survey callback handler configured")
+        bot_logger.info("Survey callback handlers configured")
 
         bot_logger.info("Configuring job queue...")
         # Настраиваем проверку рассылок каждую минуту
