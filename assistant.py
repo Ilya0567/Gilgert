@@ -74,7 +74,7 @@ from handlers.survey import send_survey_invitation, schedule_survey_reminders, h
 from database.models import ClientProfile
 
 # Импорт конфигурации (TOKEN_BOT)
-from utils.config import TOKEN_BOT, CHAT_ID, TELEGRAM_TOKEN, ALLOWED_USER_IDS, APP_ENV, DEBUG, SUPPORT_CHAT_ID, CONFIG_JSON_PATH, ADMIN_IDS
+from utils.config import TOKEN_BOT, CHAT_ID, ADMIN_IDS
 
 # Dictionary to store active sessions
 active_sessions = {}
