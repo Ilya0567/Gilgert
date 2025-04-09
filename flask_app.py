@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_from_directory, send_file
 import subprocess
 import logging
 import os
@@ -69,40 +69,52 @@ def post_receive():
     else:
         return '', 400
 
-# Страница с опросником
+# Страница с опросником - несколько разных маршрутов для надежности
 @app.route('/survey')
 def survey():
     try:
-        # Пробуем стандартный способ
-        return render_template('mini_app/survey.html')
+        # Простая версия без шаблонизатора
+        return send_file('mini_app/survey.html')
     except Exception as e:
-        app.logger.error(f"Ошибка при загрузке шаблона: {e}")
+        app.logger.error(f"Ошибка при отправке файла survey.html: {e}")
         try:
-            # Пробуем загрузить из mini_app напрямую
-            with open('mini_app/survey.html', 'r', encoding='utf-8') as f:
-                html_content = f.read()
-            return html_content
+            # Пробуем через шаблонизатор
+            return render_template('mini_app/survey.html')
         except Exception as e2:
-            app.logger.error(f"Ошибка при загрузке из mini_app: {e2}")
-            # Если и это не сработало, возвращаем текст ошибки
-            return f"Ошибка загрузки анкеты: {e}, {e2}", 500
+            app.logger.error(f"Ошибка при рендеринге шаблона: {e2}")
+            # Пробуем прочитать файл напрямую
+            try:
+                with open('mini_app/survey.html', 'r', encoding='utf-8') as f:
+                    content = f.read()
+                return content
+            except Exception as e3:
+                app.logger.error(f"Все методы получения файла анкеты не сработали: {e3}")
+                return f"Ошибка загрузки файла анкеты. Пожалуйста, сообщите администратору.", 500
 
-# Альтернативный маршрут для доступа к анкете напрямую
+# Тестовый прямой маршрут для анкеты
 @app.route('/survey-direct')
 def survey_direct():
-    with open('templates/mini_app/survey.html', 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    return html_content
+    try:
+        with open('mini_app/survey.html', 'r', encoding='utf-8') as f:
+            content = f.read()
+        return content
+    except Exception as e:
+        app.logger.error(f"Ошибка при чтении файла напрямую: {e}")
+        return f"Ошибка загрузки файла анкеты: {e}", 500
 
-# Тестовый маршрут
+# Тестовый маршрут для проверки
 @app.route('/test')
 def test_route():
-    with open('test.html', 'r', encoding='utf-8') as f:
-        return f.read()
+    try:
+        with open('test.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except:
+        return "Тестовая страница работает!"
 
 # Тестовый маршрут с простым текстом
 @app.route('/test-text')
 def test_text():
+    app.logger.info("Запрос к /test-text получен успешно")
     return "Тестовая страница работает! Это простой текст."
 
 # Статические файлы из mini_app
@@ -209,4 +221,4 @@ def submit_survey():
 init_survey_db()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)
