@@ -66,7 +66,7 @@ async def send_survey_invitation(update: Update, context: ContextTypes.DEFAULT_T
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton(
                 text="Заполнить анкету", 
-                url=f"http://193.176.190.205/survey?telegram_id={user.id}"
+                url=f"http://193.176.190.205:5000/survey?telegram_id={user.id}"
             )]
         ])
         
@@ -145,7 +145,7 @@ async def send_survey_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
                 keyboard = InlineKeyboardMarkup([
                     [InlineKeyboardButton(
                         text="Заполнить анкету", 
-                        url=f"http://193.176.190.205/survey?telegram_id={user.telegram_id}"
+                        url=f"http://193.176.190.205:5000/survey?telegram_id={user.telegram_id}"
                     )]
                 ])
                 
