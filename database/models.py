@@ -2,13 +2,15 @@ from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, E
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from .database import Base
-import logging
 import enum
 import datetime
+import logging
 
 # Get logger for this module
 models_logger = logging.getLogger(__name__)
+
+# Импортируем Base из database.py
+from database.database import Base
 
 models_logger.info("Registering models with SQLAlchemy")
 

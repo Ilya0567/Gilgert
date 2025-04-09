@@ -7,6 +7,7 @@ import logging
 from datetime import datetime, timedelta
 import json
 
+# Создаем логгер для этого модуля
 logger = logging.getLogger(__name__)
 
 def get_or_create_user(

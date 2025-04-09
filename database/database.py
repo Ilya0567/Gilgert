@@ -1,35 +1,72 @@
-from sqlalchemy import create_engine, and_, or_
+from sqlalchemy import create_engine, and_, or_, Column, Integer, String, Boolean, DateTime, ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 import logging
 import os
 from datetime import datetime, timedelta
+import sqlalchemy
 
 # Get logger for this module
 db_logger = logging.getLogger(__name__)
 
-DATABASE_URL = "sqlite:///./test.db"  # Using SQLite for simplicity
-absolute_db_path = os.path.abspath("./test.db")
+# Глобальная переменная для отслеживания инициализации БД
+_DB_INITIALIZED = False
+
+# Database configuration
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
 # Constants for session management
 SESSION_TIMEOUT = timedelta(minutes=5)  # Time after which a new session starts
 
-db_logger.info(f"Setting up database connection to: {DATABASE_URL}")
-db_logger.info(f"Database file will be created at: {absolute_db_path}")
+# Inform about database connection
+db_logger.info(f"Setting up database connection to: {SQLALCHEMY_DATABASE_URL}")
+db_path = SQLALCHEMY_DATABASE_URL.replace("sqlite:///", "")
+db_logger.info(f"Database file will be created at: {os.path.abspath(db_path)}")
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Create engine
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, 
+    connect_args={"check_same_thread": False}  # Needed for SQLite
+)
+
+# Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Create base class for models
 Base = declarative_base()
 
 def init_db():
-    """Initialize the database by creating all tables."""
-    # Import all models here to ensure they're registered with Base
+    """
+    Initialize the database by creating all tables if they don't exist.
+    """
+    global _DB_INITIALIZED
+    
+    # Проверка, была ли БД уже инициализирована
+    if _DB_INITIALIZED:
+        db_logger.info("Database already initialized, skipping...")
+        return
+        
+    # Import models to ensure they are registered with the Base metadata
     db_logger.info("Importing models before creating tables...")
     from . import models
     
+    # Create all tables
     db_logger.info("Creating database tables...")
+    
+    # Проверка существования таблицы UserConversation перед созданием
+    inspect = sqlalchemy.inspect(engine)
+    existing_tables = inspect.get_table_names()
+    
+    if 'user_conversations' not in existing_tables:
+        db_logger.info("Creating user_conversations table...")
+    else:
+        db_logger.info("user_conversations table already exists, skipping creation")
+    
     Base.metadata.create_all(bind=engine)
     db_logger.info("Database tables created successfully")
+    
+    # Отмечаем БД как инициализированную
+    _DB_INITIALIZED = True
 
 def get_db():
     """Function to get a database session."""

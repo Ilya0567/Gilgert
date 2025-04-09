@@ -294,18 +294,32 @@ def main():
         persistence_path = 'persistence/data'
         os.makedirs('persistence', exist_ok=True)
         
-        bot_logger.info("Setting up persistence...")
-        persistence = PicklePersistence(
-            filepath=persistence_path,
-            store_data={"user_data": True, "chat_data": True, "bot_data": True, "callback_data": True, "conversations": True},
-            single_file=True,
-            on_flush=False,
-            update_interval=60  # Сохраняем каждые 60 секунд
-        )
+        try:
+            bot_logger.info("Setting up persistence...")
+            persistence = PicklePersistence(
+                filepath=persistence_path,
+                store_data={"user_data": True, "chat_data": True, "bot_data": True, "callback_data": True, "conversations": True},
+                single_file=True,
+                on_flush=False,
+                update_interval=60  # Сохраняем каждые 60 секунд
+            )
+            bot_logger.info("Persistence setup complete")
+        except Exception as e:
+            bot_logger.error(f"ERROR SETTING UP PERSISTENCE: {e}", exc_info=True)
+            # Fallback to no persistence if there's an error
+            bot_logger.info("Falling back to no persistence...")
+            persistence = None
         
-        bot_logger.info("Building application with persistence...")
-        application = ApplicationBuilder().token(TOKEN_BOT).persistence(persistence).build()
-        bot_logger.info("Application built successfully")
+        try:
+            bot_logger.info("Building application with persistence...")
+            if persistence:
+                application = ApplicationBuilder().token(TOKEN_BOT).persistence(persistence).build()
+            else:
+                application = ApplicationBuilder().token(TOKEN_BOT).build()
+            bot_logger.info("Application built successfully")
+        except Exception as e:
+            bot_logger.error(f"ERROR BUILDING APPLICATION: {e}", exc_info=True)
+            raise
 
         # Обработчик сигналов для плавного завершения
         def signal_handler(sig, frame):

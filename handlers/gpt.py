@@ -49,8 +49,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Инициализируем историю сообщений из базы данных, если она не загружена
         if 'messages_history' not in context.user_data:
             # Загружаем историю из БД
-            context.user_data['messages_history'] = get_user_conversation_history(db, db_user_id)
-            logger.info(f"Loaded message history for user {user_id} from database")
+            history = get_user_conversation_history(db, db_user_id)
+            # Проверяем, что история не None и не пустой список
+            if history and isinstance(history, list):
+                context.user_data['messages_history'] = history
+                logger.info(f"Loaded message history for user {user_id} from database: {len(history)} messages")
+            else:
+                # Инициализируем пустым списком, если история не найдена
+                context.user_data['messages_history'] = []
+                logger.info(f"No message history found for user {user_id}, initializing empty list")
         
         # Добавляем сообщение пользователя в историю
         context.user_data['messages_history'].append({
