@@ -299,7 +299,9 @@ def main():
         update_interval=60  # Сохраняем каждые 60 секунд
     )
     
+    bot_logger.info("Building application with persistence...")
     application = ApplicationBuilder().token(TOKEN_BOT).persistence(persistence).build()
+    bot_logger.info("Application built successfully")
 
     # Обработчик сигналов для плавного завершения и сохранения состояния
     def signal_handler(sig, frame):
@@ -314,13 +316,16 @@ def main():
             bot_logger.info("Saving state to disk before exit...")
         sys.exit(0)
     
+    bot_logger.info("Setting up signal handlers...")
     # Регистрируем обработчики сигналов
     signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
     signal.signal(signal.SIGTERM, signal_handler)  # kill
     
     if hasattr(signal, 'SIGBREAK'):  # Windows
         signal.signal(signal.SIGBREAK, signal_handler)
+    bot_logger.info("Signal handlers configured")
 
+    bot_logger.info("Registering command handlers...")
     # Добавляем обработчик команды админа
     application.add_handler(CommandHandler("admin", admin_commands))
 
@@ -329,10 +334,14 @@ def main():
     application.add_handler(CommandHandler("stats_health", stats_health))
     application.add_handler(CommandHandler("stats_users", stats_users))
     application.add_handler(CommandHandler("stats_help", stats_help))
+    bot_logger.info("Command handlers registered")
 
+    bot_logger.info("Setting up broadcast handler...")
     # Добавляем обработчик рассылок
     application.add_handler(get_broadcast_handler())
+    bot_logger.info("Broadcast handler configured")
 
+    bot_logger.info("Setting up table handlers...")
     # Добавляем обработчики команд для таблиц
     from handlers.tables import (
         table_users, table_sessions, table_interactions,
@@ -344,6 +353,7 @@ def main():
     application.add_handler(CommandHandler("table_ratings", table_ratings))
     application.add_handler(CommandHandler("table_health", table_health))
     application.add_handler(CommandHandler("table_broadcasts", table_broadcasts))
+    bot_logger.info("Table handlers configured")
 
     # ConversationHandler описывает сценарий общения бота с пользователем.
     bot_logger.info("Configuring conversation handler...")
@@ -363,22 +373,32 @@ def main():
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
-        allow_reentry=True
+        allow_reentry=True,
+        name="main_conversation"  # Добавим имя для отладки
     )
-
+    bot_logger.info("Adding conversation handler to application...")
     application.add_handler(conv_handler)
+    bot_logger.info("Conversation handler added")
 
+    bot_logger.info("Setting up emoji response handler...")
     # Добавляем обработчик для нажатий на эмодзи
     application.add_handler(CallbackQueryHandler(handle_emoji_response, pattern="^(very_sad|sad|neutral|good|very_good)$"))
+    bot_logger.info("Emoji handler configured")
 
+    bot_logger.info("Configuring job queue...")
     # Настраиваем проверку рассылок каждую минуту
     job_queue = application.job_queue
     job_queue.run_repeating(process_broadcasts, interval=60)
+    bot_logger.info("Job queue configured")
 
+    bot_logger.info("Setting up daily messages...")
     # Вызов функции schedule_daily_message в main()
     schedule_daily_message(application)
+    bot_logger.info("Daily messages scheduled")
 
-    application.run_polling()
+    bot_logger.info("Starting polling...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    bot_logger.info("Bot stopped")
 
 
 if __name__ == "__main__":
