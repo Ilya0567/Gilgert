@@ -48,16 +48,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Проверяем, был ли вызов функции
         if gpt_response.startswith("FUNCTION_CALL:"):
-            function_name = gpt_response.split(":")[1]
+            function_parts = gpt_response.split(":", 2)  # Разделяем на 3 части: FUNCTION_CALL, имя функции, контекстный ответ
+            function_name = function_parts[1]
+            
+            # Получаем контекстный ответ (если есть)
+            context_response = function_parts[2] if len(function_parts) > 2 else "Отлично! Сейчас покажу тебе наши здоровые рецепты 🥗"
             
             # Обработка вызова функции показа рецептов
             if function_name == "show_healthy_recipes":
                 logger.info(f"Function call detected: {function_name}")
                 
-                # Создаем сообщение о переходе к рецептам
-                await update.message.reply_text(
-                    "Отлично! Сейчас покажу тебе наши здоровые рецепты 🥗"
-                )
+                # Создаем сообщение о переходе к рецептам с контекстным ответом
+                await update.message.reply_text(context_response)
                 
                 # Отправляем меню рецептов напрямую
                 keyboard = [
