@@ -41,7 +41,11 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, call
     """
     
     query = callback_query or update.callback_query
-    await query.answer()
+    
+    # Безопасный вызов answer() с проверкой 
+    if hasattr(query, 'answer') and callable(query.answer):
+        await query.answer()
+    
     data = query.data
 
     logger.debug(data)

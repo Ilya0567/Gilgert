@@ -57,7 +57,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 dummy_callback_query = type('obj', (object,), {
                     'data': 'healthy_recipes',
                     'message': update.message,
-                    'answer': lambda: None
+                    'answer': lambda *args, **kwargs: None,
+                    'edit_message_text': lambda text, reply_markup: update.message.reply_text(text=text, reply_markup=reply_markup)
                 })
                 
                 # Создаем сообщение о переходе к рецептам
