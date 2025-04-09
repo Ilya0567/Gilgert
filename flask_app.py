@@ -72,7 +72,20 @@ def post_receive():
 # Страница с опросником
 @app.route('/survey')
 def survey():
-    return render_template('mini_app/survey.html')
+    try:
+        # Пробуем стандартный способ
+        return render_template('mini_app/survey.html')
+    except Exception as e:
+        app.logger.error(f"Ошибка при загрузке шаблона: {e}")
+        try:
+            # Пробуем загрузить из mini_app напрямую
+            with open('mini_app/survey.html', 'r', encoding='utf-8') as f:
+                html_content = f.read()
+            return html_content
+        except Exception as e2:
+            app.logger.error(f"Ошибка при загрузке из mini_app: {e2}")
+            # Если и это не сработало, возвращаем текст ошибки
+            return f"Ошибка загрузки анкеты: {e}, {e2}", 500
 
 # Альтернативный маршрут для доступа к анкете напрямую
 @app.route('/survey-direct')
@@ -80,6 +93,17 @@ def survey_direct():
     with open('templates/mini_app/survey.html', 'r', encoding='utf-8') as f:
         html_content = f.read()
     return html_content
+
+# Тестовый маршрут
+@app.route('/test')
+def test_route():
+    with open('test.html', 'r', encoding='utf-8') as f:
+        return f.read()
+
+# Тестовый маршрут с простым текстом
+@app.route('/test-text')
+def test_text():
+    return "Тестовая страница работает! Это простой текст."
 
 # Статические файлы из mini_app
 @app.route('/mini_app/<path:path>')
