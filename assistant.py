@@ -222,7 +222,7 @@ def schedule_daily_message(application):
     scheduler = AsyncIOScheduler(event_loop=loop)
     moscow_tz = pytz.timezone('Europe/Moscow')
     now = datetime.now(moscow_tz)
-    next_run_time = now.replace(hour=21, minute=2, second=0, microsecond=0)
+    next_run_time = now.replace(hour=0 minute=7, second=0, microsecond=0)
     if now >= next_run_time:
         next_run_time += timedelta(days=1)
 
